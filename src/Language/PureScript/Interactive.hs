@@ -11,7 +11,7 @@ module Language.PureScript.Interactive
 
 import           Prelude ()
 import           Prelude.Compat
-import           Protolude (ordNub)
+import           Protolude (ordNub, for_)
 
 import           Data.List (sort, find, foldl')
 import           Data.Maybe (fromMaybe, mapMaybe)
@@ -312,15 +312,23 @@ handleBrowse print' moduleName = do
   st <- get
   let env = psciEnvironment st
   case findMod moduleName (psciLoadedExterns st) (psciImportedModules st) of
-    Just qualName -> print' $ printModuleSignatures qualName env
+    Just (qualName, decRefs) -> do
+      print' $ printModuleSignatures qualName env
+      for_ decRefs $ \decRef -> do
+        case decRef of
+          -- TODO: Better printer for decRefs, probably
+          -- belongs in Interactive/Printer; make sure
+          -- that we emit types; fix :browse Prim again.
+          P.ReExportRef _ _ decRef' -> print' $ show decRef'
+          _                         -> pure ()
     Nothing       -> failNotInEnv moduleName
   where
     findMod needle externs imports =
       let qualMod = fromMaybe needle (lookupUnQualifiedModName needle imports)
-          modules = S.fromList (C.primModules <> (P.getModuleName . fst <$> externs))
-      in if qualMod `S.member` modules
-           then Just qualMod
-           else Nothing
+          exFiles = M.fromList $ (\exFile -> (P.efModuleName exFile, P.efExports exFile)) <$> snd <$> externs
+      in case M.lookup qualMod exFiles of
+           Just decRefs -> Just (qualMod, decRefs)
+           Nothing      -> Nothing
 
     failNotInEnv modName = print' $ T.unpack $ "Module '" <> N.runModuleName modName <> "' is not valid."
     lookupUnQualifiedModName needle imports =
