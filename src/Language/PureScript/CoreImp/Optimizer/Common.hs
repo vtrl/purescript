@@ -3,7 +3,9 @@ module Language.PureScript.CoreImp.Optimizer.Common where
 
 import Prelude.Compat
 
+import Data.Char (isUpper)
 import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.List (foldl')
 import Data.Maybe (fromMaybe)
 
@@ -66,3 +68,7 @@ isDict _ _ = False
 
 isDict' :: [(Text, PSString)] -> AST -> Bool
 isDict' xs js = any (`isDict` js) xs
+
+isNewtype :: AST -> Bool
+isNewtype (Var _ n) = isUpper (Text.head n)
+isNewtype _ = False
