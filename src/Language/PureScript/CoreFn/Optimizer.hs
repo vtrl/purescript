@@ -2,6 +2,7 @@ module Language.PureScript.CoreFn.Optimizer (optimizeCoreFn) where
 
 import Protolude hiding (Type)
 
+import Control.Monad.Supply.Class (MonadSupply, fresh)
 import Data.List (lookup)
 import Language.PureScript.AST.Literals
 import Language.PureScript.AST.SourcePos
@@ -17,18 +18,21 @@ import qualified Language.PureScript.Constants.Prim as C
 -- |
 -- CoreFn optimization pass.
 --
-optimizeCoreFn :: Module Ann -> Module Ann
-optimizeCoreFn m = m {moduleDecls = optimizeModuleDecls $ moduleDecls m}
+optimizeCoreFn :: MonadSupply m => Module Ann -> m (Module Ann)
+optimizeCoreFn m = do
+  moduleDecls' <- optimizeModuleDecls $ moduleDecls m
+  pure $ m {moduleDecls = moduleDecls'}
 
-optimizeModuleDecls :: [Bind Ann] -> [Bind Ann]
-optimizeModuleDecls = map transformBinds
+optimizeModuleDecls :: MonadSupply m => [Bind Ann] -> m [Bind Ann]
+optimizeModuleDecls = traverse transformBinds
   where
-  (transformBinds, _, _) = everywhereOnValues identity transformExprs identity
-  transformExprs
-    = optimizeUnusedPartialFn
-    . optimizeClosedRecordUpdate
-    . optimizeFnComposition
-    . optimizeDataFunctionApply
+  (transformBinds, _, _) = everywhereOnValuesM pure transformExprs pure
+  transformExprs =
+    pure . optimizeClosedRecordUpdate
+      <=< pure . optimizeUnusedPartialFn
+      <=< optimizeFnComposition
+      <=< pure . optimizeDataFunctionApply
+
 
 optimizeClosedRecordUpdate :: Expr Ann -> Expr Ann
 optimizeClosedRecordUpdate ou@(ObjectUpdate a@(_, _, Just t, _) r updatedFields) =
@@ -67,12 +71,37 @@ optimizeDataFunctionApply e = case e of
     | dataFunction == "Data.Function" && applyFn == "applyFlipped" -> App a y x
   _ -> e
 
-optimizeFnComposition :: Expr Ann -> Expr Ann
+optimizeFnComposition :: MonadSupply m => Expr Ann -> m (Expr Ann)
 optimizeFnComposition = \case
   (App a (App b (App _ (App _
    (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident composeFn)))
    (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident "semigroupoidFn"))))
     x) y) z)
-    | composeFn == "compose" -> App a x (App b y z)
-    | composeFn == "composeFlipped" -> App b y (App a x z)
-  e -> e
+    | composeFn == "compose" -> pure $ App a x (App b y z)
+    | composeFn == "composeFlipped" -> pure $ App b y (App a x z)
+
+  app@(App a (App _ (App _
+       (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident composeFn)))
+       (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident "semigroupoidFn"))))
+        _) _)
+    | composeFn == "compose" || composeFn == "composeFlipped" -> do
+        n <- fresh
+        pure $ Abs a (GenIdent Nothing n) (foldCompose a (Qualified Nothing (GenIdent Nothing n)) (collectCompose app))
+
+  e -> pure e
+  where
+    foldCompose :: Ann -> Qualified Ident -> [Either (Expr Ann) (Expr Ann)] -> Expr Ann
+    foldCompose a i = foldr (\fn acc -> App a (either identity identity fn) acc) (Var a i)
+
+    collectCompose :: Expr Ann -> [Either (Expr Ann) (Expr Ann)]
+    collectCompose = \case
+      (App _ (App _ (App _
+       (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident composeFn)))
+       (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident "semigroupoidFn"))))
+        x) y)
+        | composeFn == "compose" -> mappend (collectCompose x) (collectCompose y)
+        | composeFn == "composeFlipped" -> mappend (collectCompose y) (collectCompose x)
+
+      e@App{} -> [Right e]
+
+      e -> [Left e]
