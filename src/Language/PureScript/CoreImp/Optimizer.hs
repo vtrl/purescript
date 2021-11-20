@@ -33,7 +33,7 @@ import Language.PureScript.CoreImp.Optimizer.Unused
 -- | Apply a series of optimizer passes to simplified JavaScript code
 optimize :: MonadSupply m => AST -> m AST
 optimize js = do
-    js' <- untilFixedPoint (inlineFnComposition . inlineUnsafeCoerce . inlineUnsafePartial . tidyUp . applyAll
+    js' <- untilFixedPoint (pure . inlineUnsafeCoerce . inlineUnsafePartial . tidyUp . applyAll
       [ inlineCommonValues
       , inlineCommonOperators
       ]) js
