@@ -27,6 +27,7 @@ optimizeModuleDecls = map transformBinds
   transformExprs
     = optimizeUnusedPartialFn
     . optimizeClosedRecordUpdate
+    . optimizeFnComposition
     . optimizeDataFunctionApply
 
 optimizeClosedRecordUpdate :: Expr Ann -> Expr Ann
@@ -65,3 +66,13 @@ optimizeDataFunctionApply e = case e of
     | dataFunction == "Data.Function" && applyFn == "apply" -> App a x y
     | dataFunction == "Data.Function" && applyFn == "applyFlipped" -> App a y x
   _ -> e
+
+optimizeFnComposition :: Expr Ann -> Expr Ann
+optimizeFnComposition = \case
+  (App a (App b (App _ (App _
+   (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident composeFn)))
+   (Var _ (Qualified (Just (ModuleName "Control.Semigroupoid")) (Ident "semigroupoidFn"))))
+    x) y) z)
+    | composeFn == "compose" -> App a x (App b y z)
+    | composeFn == "composeFlipped" -> App b y (App a x z)
+  e -> e
