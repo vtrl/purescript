@@ -20,9 +20,6 @@ tasks:
       stack update
       ln -s /workspace/.stack ~
 
-  - init: |
-      stack build --fast
-
 vscode:
   extensions:
     - haskell.haskell
