@@ -4,7 +4,7 @@ tasks:
       export XDG_CONFIG_HOME=/workspace/.local/config
       export XDG_STATE_HOME=/workspace/.local/state
       export XDG_CACHE_HOME=/workspace/.cache
-      export STACK_ROOT=/workspace/.stack
+      export STACK_ROOT=/home/gitpod/.stack
   
       export GHCUP_INSTALL_BASE_PREFIX=/workspace
       export BOOTSTRAP_HASKELL_NONINTERACTIVE=1
