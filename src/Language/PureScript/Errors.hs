@@ -190,6 +190,7 @@ data SimpleErrorMessage
   | UnsupportedRoleDeclaration
   | RoleDeclarationArityMismatch (ProperName 'TypeName) Int Int
   | DuplicateRoleDeclaration (ProperName 'TypeName)
+  | PolyTypeField Text SourceType
   deriving (Show)
 
 data ErrorMessage = ErrorMessage
@@ -354,6 +355,7 @@ errorCode em = case unwrapErrorMessage em of
   UnsupportedRoleDeclaration {} -> "UnsupportedRoleDeclaration"
   RoleDeclarationArityMismatch {} -> "RoleDeclarationArityMismatch"
   DuplicateRoleDeclaration {} -> "DuplicateRoleDeclaration"
+  PolyTypeField{} -> "PolyTypeField"
 
 -- | A stack trace for an error
 newtype MultipleErrors = MultipleErrors
@@ -1349,6 +1351,11 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
 
     renderSimpleErrorMessage (DuplicateRoleDeclaration name) =
       line $ "Duplicate role declaration for " <> markCode (runProperName name) <> "."
+
+    -- TODO: better error message
+    renderSimpleErrorMessage (PolyTypeField label type_) =
+      line $ "Foralls are disallowed in Record fields " <>
+        markCode ("{ " <> label <> " :: " <> T.stripEnd (T.pack (prettyPrintType 1000 type_)) <> " }")
 
     renderHint :: ErrorMessageHint -> Box.Box -> Box.Box
     renderHint (ErrorUnifyingTypes t1@RCons{} t2@RCons{}) detail =
