@@ -39,6 +39,7 @@ import Data.Functor (($>))
 import Data.List (transpose, (\\), partition, delete)
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Traversable (for)
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map as M
@@ -363,6 +364,8 @@ infer' (Literal ss (ObjectLiteral ps)) = do
       inferProperty :: (PSString, Expr) -> m (PSString, (Expr, SourceType))
       inferProperty (name, val) = do
         TypedValue' _ val' ty <- infer val
+        unless (isMonoType ty) $ do
+          throwError . errorMessage $ PolyTypeField (T.pack $ show name) ty
         valAndType <- if shouldInstantiate val
                         then instantiatePolyTypeWithUnknowns val' ty
                         else pure (val', ty)
@@ -822,6 +825,8 @@ checkProperties expr ps row lax = convert <$> go ps (toRowPair <$> ts') r' where
         ps'' <- go ps' ts rest
         return $ (p, v') : ps''
       Just ty -> do
+        unless (isMonoType ty) $ do
+          throwError . errorMessage $ PolyTypeField (T.pack $ show p) ty
         v' <- check v ty
         ps'' <- go ps' (delete (Label p, ty) ts) r
         return $ (p, v') : ps''
