@@ -94,10 +94,19 @@ properNameToJSON :: ProperName a -> Value
 properNameToJSON = toJSON . runProperName
 
 qualifiedToJSON :: (a -> Text) -> Qualified a -> Value
-qualifiedToJSON f (Qualified mn a) = object
-  [ T.pack "moduleName"   .= maybe Null moduleNameToJSON mn
-  , T.pack "identifier"   .= toJSON (f a)
-  ]
+qualifiedToJSON f (Qualified qb a) =
+  case qb of
+    ByNothing -> object
+      [ T.pack "identifier" .= toJSON (f a)
+      ]
+    ByModule mn -> object
+      [ T.pack "moduleName" .= moduleNameToJSON mn
+      , T.pack "identifier" .= toJSON (f a)
+      ]
+    BySourceSpan ss -> object
+      [ T.pack "sourceSpan" .= sourceSpanToJSON ss
+      , T.pack "identifier" .= toJSON (f a)
+      ]
 
 moduleNameToJSON :: ModuleName -> Value
 moduleNameToJSON (ModuleName name) = toJSON (T.splitOn (T.pack ".") name)

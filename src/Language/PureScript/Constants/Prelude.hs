@@ -1,8 +1,6 @@
 -- | Various constants which refer to things in the Prelude
 module Language.PureScript.Constants.Prelude where
 
-import Prelude.Compat
-
 import Data.String (IsString)
 import Language.PureScript.PSString (PSString)
 import Language.PureScript.Names
@@ -25,7 +23,7 @@ discard :: forall a. (IsString a) => a
 discard = "discard"
 
 pattern Discard :: Qualified (ProperName 'ClassName)
-pattern Discard = Qualified (Just ControlBind) (ProperName "Discard")
+pattern Discard = Qualified (ByModule ControlBind) (ProperName "Discard")
 
 add :: forall a. (IsString a) => a
 add = "add"
@@ -271,28 +269,28 @@ pattern DataSymbol :: ModuleName
 pattern DataSymbol = ModuleName "Data.Symbol"
 
 pattern IsSymbol :: Qualified (ProperName 'ClassName)
-pattern IsSymbol = Qualified (Just DataSymbol) (ProperName "IsSymbol")
+pattern IsSymbol = Qualified (ByModule DataSymbol) (ProperName "IsSymbol")
 
 pattern DataReflectable :: ModuleName
 pattern DataReflectable = ModuleName "Data.Reflectable"
 
 pattern Reflectable :: Qualified (ProperName 'ClassName)
-pattern Reflectable = Qualified (Just DataReflectable) (ProperName "Reflectable")
+pattern Reflectable = Qualified (ByModule DataReflectable) (ProperName "Reflectable")
 
 pattern DataOrdering :: ModuleName
 pattern DataOrdering = ModuleName "Data.Ordering"
 
 pattern Ordering :: Qualified (ProperName 'TypeName)
-pattern Ordering = Qualified (Just DataOrdering) (ProperName "Ordering")
+pattern Ordering = Qualified (ByModule DataOrdering) (ProperName "Ordering")
 
 pattern LT :: Qualified (ProperName 'ConstructorName)
-pattern LT = Qualified (Just DataOrdering) (ProperName "LT")
+pattern LT = Qualified (ByModule DataOrdering) (ProperName "LT")
 
 pattern EQ :: Qualified (ProperName 'ConstructorName)
-pattern EQ = Qualified (Just DataOrdering) (ProperName "EQ")
+pattern EQ = Qualified (ByModule DataOrdering) (ProperName "EQ")
 
 pattern GT :: Qualified (ProperName 'ConstructorName)
-pattern GT = Qualified (Just DataOrdering) (ProperName "GT")
+pattern GT = Qualified (ByModule DataOrdering) (ProperName "GT")
 
 dataArray :: forall a. (IsString a) => a
 dataArray = "Data_Array"

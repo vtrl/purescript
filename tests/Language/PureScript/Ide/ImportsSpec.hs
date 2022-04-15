@@ -113,7 +113,10 @@ spec = do
         addValueImport i mn q is =
           prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideValue i Nothing)) mn q is)
         addOpImport op mn q is =
-          prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideValueOp op (P.Qualified q (Left "")) 2 Nothing Nothing)) mn q is)
+          let q' = case q of
+                P.ByModule mn' -> Just mn'
+                _ -> Nothing
+          in prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideValueOp op (P.Qualified q (Left "")) 2 Nothing Nothing)) mn q' is)
         addDtorImport i t mn q is =
           prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideDtor i t Nothing)) mn q is)
         addTypeImport i mn q is =
@@ -195,14 +198,14 @@ spec = do
         ]
     it "adds an operator to an explicit import list" $
       shouldBe
-        (addOpImport "<~>" (P.moduleNameFromString "Data.Array") Nothing explicitImports)
+        (addOpImport "<~>" (P.moduleNameFromString "Data.Array") P.ByNothing explicitImports)
         [ "import Prelude"
         , ""
         , "import Data.Array (tail, (<~>))"
         ]
     it "adds an operator to an explicit qualified import list" $
       shouldBe
-        (addOpImport "<~>" (P.moduleNameFromString "Data.Array") (qualify "Array") explicitQualImports)
+        (addOpImport "<~>" (P.moduleNameFromString "Data.Array") (P.fromMaybeModuleName $ qualify "Array") explicitQualImports)
         [ "import Prelude"
         , ""
         , "import Data.Array (tail, (<~>)) as Array"

@@ -108,17 +108,21 @@ asContainingModule =
 
   asModuleName = moduleNameFromString <$> asText
 
--- |
--- Convert a 'Maybe' 'ModuleName' to a 'ContainingModule', using the obvious
+-- | Convert a 'Maybe' 'ModuleName' to a 'ContainingModule', using the obvious
 -- isomorphism.
---
 maybeToContainingModule :: Maybe ModuleName -> ContainingModule
 maybeToContainingModule Nothing = ThisModule
 maybeToContainingModule (Just mn) = OtherModule mn
 
+-- |
+-- Convert a 'QualifiedBy' to a 'ContainingModule', using the obvious
+-- isomorphism.
+qualifiedByToContainingModule :: QualifiedBy -> ContainingModule
+qualifiedByToContainingModule (ByModule mn) = OtherModule mn
+qualifiedByToContainingModule _ = ThisModule
+
 fromQualified :: Qualified a -> (ContainingModule, a)
-fromQualified (Qualified mn x) =
-  (maybeToContainingModule mn, x)
+fromQualified (Qualified qb x) = (qualifiedByToContainingModule qb, x)
 
 data Link
   = NoLink
@@ -296,9 +300,9 @@ aliasName for name' =
   in
     case ns of
       ValueLevel ->
-        ident (Qualified Nothing (Ident name))
+        ident (Qualified ByNothing (Ident name))
       TypeLevel ->
-        typeCtor (Qualified Nothing (ProperName name))
+        typeCtor (Qualified ByNothing (ProperName name))
 
 -- | Converts a FixityAlias into a different representation which is more
 -- useful to other functions in this module.

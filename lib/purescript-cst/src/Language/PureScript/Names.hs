@@ -19,6 +19,8 @@ import Data.Aeson.TH
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import Language.PureScript.AST.SourcePos (SourceSpan)
+
 -- | A sum of the possible name types, useful for error and lint messages.
 data Name
   = IdentName Ident
@@ -180,33 +182,59 @@ isBuiltinModuleName :: ModuleName -> Bool
 isBuiltinModuleName (ModuleName mn) = mn == "Prim" || "Prim." `T.isPrefixOf` mn
 
 -- |
+-- Determines what qualifies a @Qualified@ name.
+--
+data QualifiedBy
+  = ByNothing
+  | ByModule ModuleName
+  | BySourceSpan SourceSpan
+  deriving (Show, Eq, Ord, Generic)
+
+isByNothing :: QualifiedBy -> Bool
+isByNothing ByNothing = True
+isByNothing _ = False
+
+isBySourceSpan :: QualifiedBy -> Bool
+isBySourceSpan (BySourceSpan _) = True
+isBySourceSpan _ = False
+
+fromMaybeModuleName :: Maybe ModuleName -> QualifiedBy
+fromMaybeModuleName = \case
+  Just mn -> ByModule mn
+  Nothing -> ByNothing
+
+instance NFData QualifiedBy
+instance Serialise QualifiedBy
+
+-- |
 -- A qualified name, i.e. a name with an optional module name
 --
-data Qualified a = Qualified (Maybe ModuleName) a
+data Qualified a = Qualified QualifiedBy a
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 instance NFData a => NFData (Qualified a)
 instance Serialise a => Serialise (Qualified a)
 
 showQualified :: (a -> Text) -> Qualified a -> Text
-showQualified f (Qualified Nothing a) = f a
-showQualified f (Qualified (Just name) a) = runModuleName name <> "." <> f a
+showQualified f (Qualified (ByModule name) a) = runModuleName name <> "." <> f a
+showQualified f (Qualified _ a) = f a
 
 getQual :: Qualified a -> Maybe ModuleName
-getQual (Qualified mn _) = mn
+getQual (Qualified (ByModule mn) _) = Just mn
+getQual _ = Nothing
 
 -- |
 -- Provide a default module name, if a name is unqualified
 --
 qualify :: ModuleName -> Qualified a -> (ModuleName, a)
-qualify m (Qualified Nothing a) = (m, a)
-qualify _ (Qualified (Just m) a) = (m, a)
+qualify _ (Qualified (ByModule m) a) = (m, a)
+qualify m (Qualified _ a) = (m, a)
 
 -- |
 -- Makes a qualified value from a name and module name.
 --
 mkQualified :: a -> ModuleName -> Qualified a
-mkQualified name mn = Qualified (Just mn) name
+mkQualified name mn = Qualified (ByModule mn) name
 
 -- | Remove the module name from a qualified name
 disqualify :: Qualified a -> a
@@ -217,15 +245,16 @@ disqualify (Qualified _ a) = a
 -- module name.
 --
 disqualifyFor :: Maybe ModuleName -> Qualified a -> Maybe a
-disqualifyFor mn (Qualified mn' a) | mn == mn' = Just a
+disqualifyFor (Just mn) (Qualified (ByModule mn') a) | mn == mn' = Just a
+disqualifyFor Nothing (Qualified _ a)  = Just a
 disqualifyFor _ _ = Nothing
 
 -- |
 -- Checks whether a qualified value is actually qualified with a module reference
 --
 isQualified :: Qualified a -> Bool
-isQualified (Qualified Nothing _) = False
-isQualified _ = True
+isQualified (Qualified (ByModule _) _) = True
+isQualified _ = False
 
 -- |
 -- Checks whether a qualified value is not actually qualified with a module reference
@@ -237,9 +266,10 @@ isUnqualified = not . isQualified
 -- Checks whether a qualified value is qualified with a particular module
 --
 isQualifiedWith :: ModuleName -> Qualified a -> Bool
-isQualifiedWith mn (Qualified (Just mn') _) = mn == mn'
+isQualifiedWith mn (Qualified (ByModule mn') _) = mn == mn'
 isQualifiedWith _ _ = False
 
+$(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''QualifiedBy)
 $(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''Qualified)
 $(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''Ident)
 

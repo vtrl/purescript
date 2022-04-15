@@ -9,6 +9,7 @@ module Language.PureScript.CoreFn.FromJSON
 
 import Prelude.Compat
 
+import           Control.Applicative ((<|>))
 import           Data.Aeson
 import           Data.Aeson.Types (Parser, listParser)
 import qualified Data.Map.Strict as M
@@ -106,13 +107,24 @@ identFromJSON = withText "Ident" $ \case
 properNameFromJSON :: Value -> Parser (ProperName a)
 properNameFromJSON = fmap ProperName . parseJSON
 
-qualifiedFromJSON :: (Text -> a) -> Value -> Parser (Qualified a)
-qualifiedFromJSON f = withObject "Qualified" qualifiedFromObj
+qualifiedFromJSON :: FilePath -> (Text -> a) -> Value -> Parser (Qualified a)
+qualifiedFromJSON modulePath f = withObject "Qualified" qualifiedFromObj
   where
-  qualifiedFromObj o = do
-    mn <- o .:? "moduleName" >>= traverse moduleNameFromJSON
+  qualifiedFromObj o =
+    qualifiedByModuleFromObj o <|>
+    qualifiedBySourceSpanFromObj o <|>
+    qualifiedByNothing o
+  qualifiedByNothing o = do
+    i <- o .: "identifier" >>= withText "Ident" (return . f)
+    pure $ Qualified ByNothing i
+  qualifiedByModuleFromObj o = do
+    mn <- o .: "moduleName" >>= moduleNameFromJSON
     i  <- o .: "identifier" >>= withText "Ident" (return . f)
-    return $ Qualified mn i
+    pure $ Qualified (ByModule mn) i
+  qualifiedBySourceSpanFromObj o = do
+    ss <- o .: "sourceSpan" >>= sourceSpanFromJSON modulePath
+    i  <- o .: "identifier" >>= withText "Ident" (return . f)
+    pure $ Qualified (BySourceSpan ss) i
 
 moduleNameFromJSON :: Value -> Parser ModuleName
 moduleNameFromJSON v = ModuleName . T.intercalate "." <$> listParser parseJSON v
@@ -194,7 +206,7 @@ exprFromJSON modulePath = withObject "Expr" exprFromObj
 
   varFromObj o = do
     ann <- o .: "annotation" >>= annFromJSON modulePath
-    qi <- o .: "value" >>= qualifiedFromJSON Ident
+    qi <- o .: "value" >>= qualifiedFromJSON modulePath Ident
     return $ Var ann qi
 
   literalExprFromObj o = do
@@ -296,8 +308,8 @@ binderFromJSON modulePath = withObject "Binder" binderFromObj
 
   constructorBinderFromObj o = do
     ann <- o .: "annotation" >>= annFromJSON modulePath
-    tyn <- o .: "typeName" >>= qualifiedFromJSON ProperName
-    con <- o .: "constructorName" >>= qualifiedFromJSON ProperName
+    tyn <- o .: "typeName" >>= qualifiedFromJSON modulePath ProperName
+    con <- o .: "constructorName" >>= qualifiedFromJSON modulePath ProperName
     bs  <- o .: "binders" >>= listParser (binderFromJSON modulePath)
     return $ ConstructorBinder ann tyn con bs
 

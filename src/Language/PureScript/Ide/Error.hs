@@ -66,14 +66,18 @@ encodeRebuildErrors = toJSON . map encodeRebuildError . P.runMultipleErrors
     insertTSCompletions _ _ _ v = v
 
     identCompletion (P.Qualified mn i, ty) =
-      Completion     
-        { complModule = maybe "" P.runModuleName mn
+      Completion
+        { complModule = case mn of
+            P.ByModule mn' -> P.runModuleName mn'
+            _ -> ""
         , complIdentifier = i
         , complType = prettyPrintTypeSingleLine ty
         , complExpandedType = prettyPrintTypeSingleLine ty
         , complLocation = Nothing
         , complDocumentation = Nothing
-        , complExportedFrom = toList mn
+        , complExportedFrom = case mn of
+            P.ByModule mn' -> [mn']
+            _ -> []
         , complDeclarationType = Nothing
         }
     fieldCompletion (label, ty) =
