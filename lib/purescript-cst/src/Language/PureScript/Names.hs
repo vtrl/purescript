@@ -8,6 +8,7 @@ module Language.PureScript.Names where
 import Prelude.Compat
 
 import Codec.Serialise (Serialise)
+import Control.Applicative ((<|>))
 import Control.Monad.Supply.Class
 import Control.DeepSeq (NFData)
 import Data.Functor.Contravariant (contramap)
@@ -269,8 +270,25 @@ isQualifiedWith :: ModuleName -> Qualified a -> Bool
 isQualifiedWith mn (Qualified (ByModule mn') _) = mn == mn'
 isQualifiedWith _ _ = False
 
-$(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''QualifiedBy)
-$(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''Qualified)
+instance ToJSON a => ToJSON (Qualified a) where
+  toJSON (Qualified qb a) = case qb of
+    ByModule mn -> toJSON (mn, a)
+    BySourceSpan ss -> toJSON (ss, a)
+    ByNothing -> toJSON [ a ]
+
+instance FromJSON a => FromJSON (Qualified a) where
+  parseJSON v = byModule <|> bySourceSpan <|> byNothing
+    where
+    byModule = do
+      (mn, a) <- parseJSON v
+      pure $ Qualified (ByModule mn) a
+    bySourceSpan = do
+      (ss, a) <- parseJSON v
+      pure $ Qualified (BySourceSpan ss) a
+    byNothing = do
+      [ a ] <- parseJSON v
+      pure $ Qualified ByNothing a
+
 $(deriveJSON (defaultOptions { sumEncoding = ObjectWithSingleField }) ''Ident)
 
 instance ToJSON ModuleName where
