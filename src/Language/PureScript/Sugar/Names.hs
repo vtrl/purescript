@@ -10,7 +10,7 @@ module Language.PureScript.Sugar.Names
   ) where
 
 import Prelude.Compat
-import Protolude (ordNub, sortOn)
+import Protolude (find, ordNub, sortOn)
 
 import Control.Arrow (first, second)
 import Control.Monad
@@ -60,7 +60,7 @@ desugarImports = updateEnv >=> renameInModule'
       let (_, imps, exps) = fromMaybe (internalError "Module is missing in renameInModule'") $ M.lookup mn env
       (m', used) <- flip runStateT M.empty $ renameInModule imps m
       modify . second $ M.unionWith (<>) used
-      return $ elaborateExports exps m'
+      return $ elaborateExports exps $ renameLetBound m'
 
 -- | Create an environment from a collection of externs files
 externsEnv
@@ -399,3 +399,32 @@ renameInModule imports (Module modSS coms mn decls exps) =
 
     where
     throwUnknown = throwError . errorMessage . UnknownName . fmap toName $ qname
+
+-- |
+-- Rename locally-bound names such that they're qualified by the source span of
+-- the declarations they reference, allowing AST-driven operations to easily
+-- disambiguate different instances of names referencing local bindings.
+--
+renameLetBound :: Module -> Module
+renameLetBound (Module ms cm mn dc ex) = Module ms cm mn (go <$> dc) ex
+  where
+  (go, _, _, _, _) = everywhereWithContextOnValues
+    [] updateDeclaration updateValue (,) (,) (,)
+
+  updateDeclaration :: [Declaration] -> Declaration -> ([Declaration], Declaration)
+  updateDeclaration localDeclarations declaration =
+    (declaration : localDeclarations, declaration)
+
+  updateValue :: [Declaration] -> Expr -> ([Declaration], Expr)
+  updateValue localDeclarations expression = case expression of
+    Var ss (Qualified ByNothing ident) ->
+      let qb = maybe ByNothing BySourceSpan $ findVarSourceSpan ident
+      in (localDeclarations, Var ss $ Qualified qb ident)
+    _ ->
+      (localDeclarations, expression)
+    where
+    findVarSourceSpan :: Ident -> Maybe SourceSpan
+    findVarSourceSpan ident = declSourceSpan <$> find go' localDeclarations
+      where
+      go' (ValueDeclaration ValueDeclarationData{..}) = valdeclIdent == ident
+      go' _ = False
