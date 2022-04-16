@@ -149,10 +149,10 @@ rebracketFiltered !caller pred_ externs m = do
     goExpr _ e@(PositionedValue pos _ _) = return (pos, e)
     goExpr _ (Op pos op) =
       (pos,) <$> case op `M.lookup` valueAliased of
-        Just (Qualified mn' (Left alias)) ->
-          return $ Var pos (Qualified mn' alias)
-        Just (Qualified mn' (Right alias)) ->
-          return $ Constructor pos (Qualified mn' alias)
+        Just (Qualified qb (Left alias)) ->
+          return $ Var pos (Qualified qb alias)
+        Just (Qualified qb (Right alias)) ->
+          return $ Constructor pos (Qualified qb alias)
         Nothing ->
           throwError . errorMessage' pos . UnknownName $ fmap ValOpName op
     goExpr pos other = return (pos, other)
@@ -161,10 +161,10 @@ rebracketFiltered !caller pred_ externs m = do
     goBinder _ b@(PositionedBinder pos _ _) = return (pos, b)
     goBinder _ (BinaryNoParensBinder (OpBinder pos op) lhs rhs) =
       case op `M.lookup` valueAliased of
-        Just (Qualified mn' (Left alias)) ->
-          throwError . errorMessage' pos $ InvalidOperatorInBinder op (Qualified mn' alias)
-        Just (Qualified mn' (Right alias)) ->
-          return (pos, ConstructorBinder pos (Qualified mn' alias) [lhs, rhs])
+        Just (Qualified qb (Left alias)) ->
+          throwError . errorMessage' pos $ InvalidOperatorInBinder op (Qualified qb alias)
+        Just (Qualified qb (Right alias)) ->
+          return (pos, ConstructorBinder pos (Qualified qb alias) [lhs, rhs])
         Nothing ->
           throwError . errorMessage' pos . UnknownName $ fmap ValOpName op
     goBinder _ BinaryNoParensBinder{} =

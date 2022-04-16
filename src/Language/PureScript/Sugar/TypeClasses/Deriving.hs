@@ -106,44 +106,44 @@ deriveInstance
 deriveInstance mn syns kinds _ ds (TypeInstanceDeclaration sa@(ss, _) ch idx nm deps className tys DerivedInstance)
   | className == Qualified (ByModule dataEq) (ProperName "Eq")
   = case tys of
-      [ty] | Just (Qualified mn' tyCon, _) <- unwrapTypeConstructor ty
-           , ByModule mn == mn' || ByNothing == mn'
+      [ty] | Just (Qualified qb tyCon, _) <- unwrapTypeConstructor ty
+           , ByModule mn == qb || ByNothing == qb
            -> TypeInstanceDeclaration sa ch idx nm deps className tys . ExplicitInstance <$> deriveEq ss mn syns kinds ds tyCon
            | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys ty
       _ -> throwError . errorMessage' ss $ InvalidDerivedInstance className tys 1
   | className == Qualified (ByModule dataEq) (ProperName "Eq1")
   = case tys of
-      [ty] | Just (Qualified mn' _, _) <- unwrapTypeConstructor ty
-           , ByModule mn == mn' || ByNothing == mn'
+      [ty] | Just (Qualified qb _, _) <- unwrapTypeConstructor ty
+           , ByModule mn == qb || ByNothing == qb
            -> pure . TypeInstanceDeclaration sa ch idx nm deps className tys . ExplicitInstance $ deriveEq1 ss
            | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys ty
       _ -> throwError . errorMessage' ss $ InvalidDerivedInstance className tys 1
   | className == Qualified (ByModule dataOrd) (ProperName "Ord")
   = case tys of
-      [ty] | Just (Qualified mn' tyCon, _) <- unwrapTypeConstructor ty
-           , ByModule mn == mn' || ByNothing == mn'
+      [ty] | Just (Qualified qb tyCon, _) <- unwrapTypeConstructor ty
+           , ByModule mn == qb || ByNothing == qb
            -> TypeInstanceDeclaration sa ch idx nm deps className tys . ExplicitInstance <$> deriveOrd ss mn syns kinds ds tyCon
            | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys ty
       _ -> throwError . errorMessage' ss $ InvalidDerivedInstance className tys 1
   | className == Qualified (ByModule dataOrd) (ProperName "Ord1")
   = case tys of
-      [ty] | Just (Qualified mn' _, _) <- unwrapTypeConstructor ty
-           , ByModule mn == mn' || ByNothing == mn'
+      [ty] | Just (Qualified qb _, _) <- unwrapTypeConstructor ty
+           , ByModule mn == qb || ByNothing == qb
            -> pure . TypeInstanceDeclaration sa ch idx nm deps className tys . ExplicitInstance $ deriveOrd1 ss
            | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys ty
       _ -> throwError . errorMessage' ss $ InvalidDerivedInstance className tys 1
   | className == Qualified (ByModule dataFunctor) (ProperName "Functor")
   = case tys of
-      [ty] | Just (Qualified mn' tyCon, _) <- unwrapTypeConstructor ty
-           , ByModule mn == mn' || ByNothing == mn'
+      [ty] | Just (Qualified qb tyCon, _) <- unwrapTypeConstructor ty
+           , ByModule mn == qb || ByNothing == qb
            -> TypeInstanceDeclaration sa ch idx nm deps className tys . ExplicitInstance <$> deriveFunctor ss mn syns kinds ds tyCon
            | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys ty
       _ -> throwError . errorMessage' ss $ InvalidDerivedInstance className tys 1
   | className == DataNewtype.Newtype
   = case tys of
       [wrappedTy, unwrappedTy]
-        | Just (Qualified mn' tyCon, args) <- unwrapTypeConstructor wrappedTy
-        , ByModule mn == mn' || ByNothing == mn'
+        | Just (Qualified qb tyCon, args) <- unwrapTypeConstructor wrappedTy
+        , ByModule mn == qb || ByNothing == qb
         -> do actualUnwrappedTy <- deriveNewtype ss syns kinds ds tyCon args unwrappedTy
               return $ TypeInstanceDeclaration sa ch idx nm deps className [wrappedTy, actualUnwrappedTy] (ExplicitInstance [])
         | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys wrappedTy
@@ -151,8 +151,8 @@ deriveInstance mn syns kinds _ ds (TypeInstanceDeclaration sa@(ss, _) ch idx nm 
   | className == DataGenericRep.Generic
   = case tys of
       [actualTy, repTy]
-        | Just (Qualified mn' tyCon, args) <- unwrapTypeConstructor actualTy
-        , ByModule mn == mn' || ByNothing == mn'
+        | Just (Qualified qb tyCon, args) <- unwrapTypeConstructor actualTy
+        , ByModule mn == qb || ByNothing == qb
         -> do (inst, inferredRepTy) <- deriveGenericRep ss mn syns kinds ds tyCon args repTy
               return $ TypeInstanceDeclaration sa ch idx nm deps className [actualTy, inferredRepTy] (ExplicitInstance inst)
         | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys actualTy
@@ -160,8 +160,8 @@ deriveInstance mn syns kinds _ ds (TypeInstanceDeclaration sa@(ss, _) ch idx nm 
   | otherwise = throwError . errorMessage' ss $ CannotDerive className tys
 deriveInstance mn syns kinds ndis ds (TypeInstanceDeclaration sa@(ss, _) ch idx nm deps className tys NewtypeInstance) =
   case tys of
-    _ : _ | Just (Qualified mn' tyCon, args) <- unwrapTypeConstructor (last tys)
-          , ByModule mn == mn' || ByNothing == mn'
+    _ : _ | Just (Qualified qb tyCon, args) <- unwrapTypeConstructor (last tys)
+          , ByModule mn == qb || ByNothing == qb
           -> TypeInstanceDeclaration sa ch idx nm deps className tys . NewtypeInstanceWithDictionary <$> deriveNewtypeInstance ss mn syns kinds ndis className ds tys tyCon args
           | otherwise -> throwError . errorMessage' ss $ ExpectedTypeConstructor className tys (last tys)
     _ -> throwError . errorMessage' ss $ InvalidNewtypeInstance className tys

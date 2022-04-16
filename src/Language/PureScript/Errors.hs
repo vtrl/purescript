@@ -1607,18 +1607,18 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
     nameType (ModName _) = "module"
 
     runName :: Qualified Name -> Text
-    runName (Qualified mn (IdentName name)) =
-      showQualified showIdent (Qualified mn name)
-    runName (Qualified mn (ValOpName op)) =
-      showQualified showOp (Qualified mn op)
-    runName (Qualified mn (TyName name)) =
-      showQualified runProperName (Qualified mn name)
-    runName (Qualified mn (TyOpName op)) =
-      showQualified showOp (Qualified mn op)
-    runName (Qualified mn (DctorName name)) =
-      showQualified runProperName (Qualified mn name)
-    runName (Qualified mn (TyClassName name)) =
-      showQualified runProperName (Qualified mn name)
+    runName (Qualified qb (IdentName name)) =
+      showQualified showIdent (Qualified qb name)
+    runName (Qualified qb (ValOpName op)) =
+      showQualified showOp (Qualified qb op)
+    runName (Qualified qb (TyName name)) =
+      showQualified runProperName (Qualified qb name)
+    runName (Qualified qb (TyOpName op)) =
+      showQualified showOp (Qualified qb op)
+    runName (Qualified qb (DctorName name)) =
+      showQualified runProperName (Qualified qb name)
+    runName (Qualified qb (TyClassName name)) =
+      showQualified runProperName (Qualified qb name)
     runName (Qualified ByNothing (ModName name)) =
       runModuleName name
     runName (Qualified _ ModName{}) =

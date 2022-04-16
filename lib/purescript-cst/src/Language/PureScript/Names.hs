@@ -204,6 +204,11 @@ fromMaybeModuleName = \case
   Just mn -> ByModule mn
   Nothing -> ByNothing
 
+toMaybeModuleName :: QualifiedBy -> Maybe ModuleName
+toMaybeModuleName = \case
+  ByModule mn -> Just mn
+  _ -> Nothing
+
 instance NFData QualifiedBy
 instance Serialise QualifiedBy
 

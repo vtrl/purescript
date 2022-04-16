@@ -189,14 +189,14 @@ lintImports (Module _ _ mn mdecls (Just mexports)) env usedImps = do
     -> [(ModuleName, Qualified Name)]
   extractByQual k m toName = mapMaybe go (M.toList m)
     where
-    go (q@(Qualified mnq _), is)
+    go (q@(Qualified qbq _), is)
       | isUnqualified q =
           case find (isQualifiedWith k) (map importName is) of
-            Just (Qualified _ name) -> Just (k, Qualified mnq (toName name))
+            Just (Qualified _ name) -> Just (k, Qualified qbq (toName name))
             _ -> Nothing
       | isQualifiedWith k q =
           case importName (head is) of
-            Qualified (ByModule mn') name -> Just (mn', Qualified mnq (toName name))
+            Qualified (ByModule mn') name -> Just (mn', Qualified qbq (toName name))
             _ -> internalError "unqualified name in extractByQual"
     go _ = Nothing
 

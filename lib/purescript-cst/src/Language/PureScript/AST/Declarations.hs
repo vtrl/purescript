@@ -132,9 +132,7 @@ addDefaultImport (Qualified toImportAs toImport) m@(Module ss coms mn decls exps
   if isExistingImport `any` decls || mn == toImport then m
   else Module ss coms mn (ImportDeclaration (ss, []) toImport Implicit toImportAs' : decls) exps
   where
-  toImportAs' = case toImportAs of
-    ByModule mn'' -> Just mn''
-    _ -> Nothing
+  toImportAs' = toMaybeModuleName toImportAs
 
   isExistingImport (ImportDeclaration _ mn' _ as')
     | mn' == toImport =

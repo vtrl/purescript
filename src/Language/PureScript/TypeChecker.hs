@@ -517,7 +517,7 @@ typeCheckAll moduleName = traverse go
     for_ nonOrphanModules $ \m -> do
       dicts <- M.toList <$> lookupTypeClassDictionariesForClass (Just m) className
 
-      for_ dicts $ \(Qualified mn' ident, dictNel) -> do
+      for_ dicts $ \(Qualified qb ident, dictNel) -> do
         for_ dictNel $ \dict -> do
           -- ignore instances in the same instance chain
           if ch == tcdChain dict ||
@@ -525,7 +525,7 @@ typeCheckAll moduleName = traverse go
           then return ()
           else do
             let this = if isPlainIdent dictName then Right dictName else Left $ srcInstanceType ss vars className tys'
-            let that = Qualified mn' . maybeToLeft ident $ tcdDescription dict
+            let that = Qualified qb . maybeToLeft ident $ tcdDescription dict
             throwError . errorMessage $
               OverlappingInstances className
                                     tys'
@@ -651,7 +651,7 @@ typeCheckModule modulesExports (Module ss coms mn decls (Just exps)) =
     classesToSuperClasses <- gets
       ( M.map
         ( S.fromList
-        . filter (\(Qualified mn' _) -> mn' == ByModule mn)
+        . filter (\(Qualified qb _) -> qb == ByModule mn)
         . fmap constraintClass
         . typeClassSuperclasses
         )

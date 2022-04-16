@@ -113,9 +113,7 @@ spec = do
         addValueImport i mn q is =
           prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideValue i Nothing)) mn q is)
         addOpImport op mn q is =
-          let q' = case q of
-                P.ByModule mn' -> Just mn'
-                _ -> Nothing
+          let q' = P.toMaybeModuleName q
           in prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideValueOp op (P.Qualified q (Left "")) 2 Nothing Nothing)) mn q' is)
         addDtorImport i t mn q is =
           prettyPrintImportSection (addExplicitImport' (_idaDeclaration (Test.ideDtor i t Nothing)) mn q is)

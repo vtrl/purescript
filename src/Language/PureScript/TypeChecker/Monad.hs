@@ -307,9 +307,7 @@ lookupTypeVariable currentModule (Qualified qualifiedBy name) = do
     Nothing -> throwError . errorMessage $ UndefinedTypeVariable name
     Just (k, _) -> return k
   where
-  qualifiedBy' = case qualifiedBy of
-    ByModule moduleName -> ByModule moduleName
-    _ -> ByModule currentModule
+  qualifiedBy' = ByModule $ fromMaybe currentModule $ toMaybeModuleName qualifiedBy
 
 -- | Get the current @Environment@
 getEnv :: (MonadState CheckState m) => m Environment

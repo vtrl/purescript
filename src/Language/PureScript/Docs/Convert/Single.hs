@@ -199,10 +199,10 @@ convertDeclaration (P.TypeInstanceDeclaration (ss, com) _ _ _ constraints classN
 
   childDecl = ChildDeclaration title (convertComments com) (Just ss) (ChildInstance (fmap ($> ()) constraints) (classApp $> ()))
   classApp = foldl' P.srcTypeApp (P.srcTypeConstructor (fmap P.coerceProperName className)) tys
-convertDeclaration (P.ValueFixityDeclaration sa fixity (P.Qualified mn alias) _) title =
-  Just . Right $ mkDeclaration sa title (AliasDeclaration fixity (P.Qualified mn (Right alias)))
-convertDeclaration (P.TypeFixityDeclaration sa fixity (P.Qualified mn alias) _) title =
-  Just . Right $ mkDeclaration sa title (AliasDeclaration fixity (P.Qualified mn (Left alias)))
+convertDeclaration (P.ValueFixityDeclaration sa fixity (P.Qualified qb alias) _) title =
+  Just . Right $ mkDeclaration sa title (AliasDeclaration fixity (P.Qualified qb (Right alias)))
+convertDeclaration (P.TypeFixityDeclaration sa fixity (P.Qualified qb alias) _) title =
+  Just . Right $ mkDeclaration sa title (AliasDeclaration fixity (P.Qualified qb (Left alias)))
 convertDeclaration (P.KindDeclaration sa keyword _ kind) title =
   Just $ Left ([(title, AugmentType), (title, AugmentClass)], AugmentKindSig ksi)
   where

@@ -65,19 +65,15 @@ encodeRebuildErrors = toJSON . map encodeRebuildError . P.runMultipleErrors
                  ]) value)
     insertTSCompletions _ _ _ v = v
 
-    identCompletion (P.Qualified mn i, ty) =
+    identCompletion (P.Qualified qb i, ty) =
       Completion
-        { complModule = case mn of
-            P.ByModule mn' -> P.runModuleName mn'
-            _ -> ""
+        { complModule = maybe "" P.runModuleName $ P.toMaybeModuleName qb
         , complIdentifier = i
         , complType = prettyPrintTypeSingleLine ty
         , complExpandedType = prettyPrintTypeSingleLine ty
         , complLocation = Nothing
+        , complExportedFrom = toList $ P.toMaybeModuleName qb
         , complDocumentation = Nothing
-        , complExportedFrom = case mn of
-            P.ByModule mn' -> [mn']
-            _ -> []
         , complDeclarationType = Nothing
         }
     fieldCompletion (label, ty) =

@@ -230,15 +230,15 @@ renameInModule imports (Module modSS coms mn decls exps) =
       TypeFixityDeclaration sa fixity
         <$> updateTypeName alias ss
         <*> pure op
-  updateDecl bound (ValueFixityDeclaration sa@(ss, _) fixity (Qualified mn' (Left alias)) op) =
+  updateDecl bound (ValueFixityDeclaration sa@(ss, _) fixity (Qualified qb (Left alias)) op) =
     fmap (bound,) $
       ValueFixityDeclaration sa fixity . fmap Left
-        <$> updateValueName (Qualified mn' alias) ss
+        <$> updateValueName (Qualified qb alias) ss
         <*> pure op
-  updateDecl bound (ValueFixityDeclaration sa@(ss, _) fixity (Qualified mn' (Right alias)) op) =
+  updateDecl bound (ValueFixityDeclaration sa@(ss, _) fixity (Qualified qb (Right alias)) op) =
     fmap (bound,) $
       ValueFixityDeclaration sa fixity . fmap Right
-        <$> updateDataConstructorName (Qualified mn' alias) ss
+        <$> updateDataConstructorName (Qualified qb alias) ss
         <*> pure op
   updateDecl b d =
     return (b, d)
@@ -370,8 +370,8 @@ renameInModule imports (Module modSS coms mn decls exps) =
     -> Qualified a
     -> SourceSpan
     -> m (Qualified a)
-  update imps toName qname@(Qualified mn' name) pos = warnAndRethrowWithPosition pos $
-    case (M.lookup qname imps, mn') of
+  update imps toName qname@(Qualified qb name) pos = warnAndRethrowWithPosition pos $
+    case (M.lookup qname imps, qb) of
 
       -- We found the name in our imports, so we return the name for it,
       -- qualifying with the name of the module it was originally defined in
