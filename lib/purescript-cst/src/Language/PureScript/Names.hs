@@ -189,7 +189,20 @@ data QualifiedBy
   = ByNothing
   | ByModule ModuleName
   | BySourceSpan SourceSpan
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic)
+
+-- We need the `Ord` instance for `QualifiedBy` to be manually written
+-- as `ByNothing` and `BySourceSpan` mean the same in terms of keeping
+-- an environment i.e. `Map (Qualified a) b`.
+--
+-- The only time the distinction between these two variants become
+-- relevant is with an AST-driven procedures which need to
+-- disambiguate between local names.
+instance Ord QualifiedBy where
+  compare (ByModule a) (ByModule b) = compare a b
+  compare _            (ByModule _) = LT
+  compare (ByModule _) _            = GT
+  compare _            _            = EQ
 
 isByNothing :: QualifiedBy -> Bool
 isByNothing ByNothing = True
