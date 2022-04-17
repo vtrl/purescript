@@ -118,11 +118,13 @@ convertType fileName = go
     TypeConstructor _ a ->
       T.TypeConstructor (sourceQualName fileName a) $ qualified a
     TypeWildcard _ a ->
-      T.TypeWildcard (sourceAnnCommented fileName a a) Nothing
+      T.TypeWildcard (sourceAnnCommented fileName a a) T.UnnamedWildcard
     TypeHole _ a ->
-      T.TypeWildcard (sourceName fileName a) . Just . getIdent $ nameValue a
+      T.TypeWildcard (sourceName fileName a) . T.HoleWildcard . getIdent $ nameValue a
     TypeString _ a b ->
       T.TypeLevelString (sourceAnnCommented fileName a a) b
+    TypeInt _ _ a b ->
+      T.TypeLevelInt (sourceAnnCommented fileName a a) b
     TypeRow _ (Wrapped _ row b) ->
       goRow row b
     TypeRecord _ (Wrapped a row b) -> do
@@ -566,6 +568,7 @@ convertDeclaration fileName decl = case decl of
         TypeConstructor _ qn -> N.runProperName $ qualName qn
         TypeOpName _ qn -> N.runOpName $ qualName qn
         TypeString _ _ ps -> prettyPrintStringJS ps
+        TypeInt _ _ _ nt -> Text.pack $ show nt
 
         -- Typed holes are disallowed in instance heads
         TypeHole{} -> ""
