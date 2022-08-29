@@ -88,7 +88,7 @@ unknownVarNames used unks =
   vars = fmap (("k" <>) . T.pack . show) ([1..] :: [Int])
 
 apply :: (MonadState CheckState m) => SourceType -> m SourceType
-apply ty = flip substituteType ty <$> gets checkSubstitution
+apply ty = gets (flip substituteType ty . checkSubstitution)
 
 substituteType :: Substitution -> SourceType -> SourceType
 substituteType sub = everywhereOnTypes $ \case
@@ -173,7 +173,7 @@ inferKind = \tyToInfer ->
           pure (ty, kind' $> ann)
         Just (kind, _) -> do
           pure (ty, kind $> ann)
-    ConstrainedType ann' con@(Constraint ann v _ _ _) ty -> do
+    ConstrainedType ann' con@(Constraint ann _ v _ _ _) ty -> do
       env <- getEnv
       con' <- case M.lookup (coerceProperName <$> v) (E.types env) of
         Nothing ->
@@ -375,7 +375,7 @@ subsumesKind = go
     (a@(TypeApp _ (TypeApp _ arr _) _), TUnknown ann u)
       | eqType arr E.tyFunction
       , IS.notMember u (unknowns a) ->
-          join $ go <$> pure a <*> solveUnknownAsFunction ann u
+          (go a =<< solveUnknownAsFunction ann u)
     (a, b) ->
       unifyKinds a b
 
@@ -847,19 +847,19 @@ checkConstraint
   :: forall m. (MonadError MultipleErrors m, MonadState CheckState m)
   => SourceConstraint
   -> m SourceConstraint
-checkConstraint (Constraint ann clsName kinds args dat) = do
+checkConstraint (Constraint ann ofs clsName kinds args dat) = do
   let ty = foldl (TypeApp ann) (foldl (KindApp ann) (TypeConstructor ann (fmap coerceProperName clsName)) kinds) args
   (_, kinds', args') <- unapplyTypes <$> checkKind ty E.kindConstraint
-  pure $ Constraint ann clsName kinds' args' dat
+  pure $ Constraint ann ofs clsName kinds' args' dat
 
 applyConstraint
   :: forall m. (MonadError MultipleErrors m, MonadState CheckState m)
   => SourceConstraint
   -> m SourceConstraint
-applyConstraint (Constraint ann clsName kinds args dat) = do
+applyConstraint (Constraint ann ofs clsName kinds args dat) = do
   let ty = foldl (TypeApp ann) (foldl (KindApp ann) (TypeConstructor ann (fmap coerceProperName clsName)) kinds) args
   (_, kinds', args') <- unapplyTypes <$> apply ty
-  pure $ Constraint ann clsName kinds' args' dat
+  pure $ Constraint ann ofs clsName kinds' args' dat
 
 type InstanceDeclarationArgs =
   ( SourceAnn

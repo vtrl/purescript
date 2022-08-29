@@ -169,6 +169,8 @@ instance Serialise ConstraintData
 data Constraint a = Constraint
   { constraintAnn :: a
   -- ^ constraint annotation
+, constraintClassPos :: SourcePos
+  -- ^ constraint class name position
   , constraintClass :: Qualified (ProperName 'ClassName)
   -- ^ constraint class name
   , constraintKindArgs :: [Type a]
@@ -183,7 +185,7 @@ instance NFData a => NFData (Constraint a)
 instance Serialise a => Serialise (Constraint a)
 
 srcConstraint :: Qualified (ProperName 'ClassName) -> [SourceType] -> [SourceType] -> Maybe ConstraintData -> SourceConstraint
-srcConstraint = Constraint NullSourceAnn
+srcConstraint = Constraint NullSourceAnn NullSourcePos
 
 mapConstraintArgs :: ([Type a] -> [Type a]) -> Constraint a -> Constraint a
 mapConstraintArgs f c = c { constraintArgs = f (constraintArgs c) }
@@ -300,6 +302,7 @@ constraintDataFromJSON = A.withObject "PartialConstraintData" $ \o -> do
 constraintFromJSON :: forall a. A.Parser a -> (A.Value -> A.Parser a) -> A.Value -> A.Parser (Constraint a)
 constraintFromJSON defaultAnn annFromJSON = A.withObject "Constraint" $ \o -> do
   constraintAnn   <- (o .: "constraintAnn" >>= annFromJSON) <|> defaultAnn
+  constraintClassPos <- o .: "constraintClassPos" <|> pure NullSourcePos
   constraintClass <- o .: "constraintClass"
   constraintKindArgs <- o .:? "constraintKindArgs" .!= [] >>= traverse (typeFromJSON defaultAnn annFromJSON)
   constraintArgs  <- o .: "constraintArgs" >>= traverse (typeFromJSON defaultAnn annFromJSON)
@@ -795,7 +798,7 @@ instance Ord (Constraint a) where
   compare = compareConstraint
 
 eqConstraint :: Constraint a -> Constraint b -> Bool
-eqConstraint (Constraint _ a b c d) (Constraint _ a' b' c' d') = a == a' && and (zipWith eqType b b') && and (zipWith eqType c c') && d == d'
+eqConstraint (Constraint _ a _ b c d) (Constraint _ a' _ b' c' d') = a == a' && and (zipWith eqType b b') && and (zipWith eqType c c') && d == d'
 
 compareConstraint :: Constraint a -> Constraint b -> Ordering
-compareConstraint (Constraint _ a b c d) (Constraint _ a' b' c' d') = compare a a' <> fold (zipWith compareType b b') <> fold (zipWith compareType c c') <> compare d d'
+compareConstraint (Constraint _ a _ b c d) (Constraint _ a' _ b' c' d') = compare a a' <> fold (zipWith compareType b b') <> fold (zipWith compareType c c') <> compare d d'

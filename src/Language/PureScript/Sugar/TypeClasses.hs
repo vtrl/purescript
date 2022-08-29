@@ -97,7 +97,7 @@ desugarModule (Module ss coms name decls (Just exps)) = do
   superClassesNames _ = []
 
   constraintName :: SourceConstraint -> Qualified (ProperName 'ClassName)
-  constraintName (Constraint _ cName _ _ _) = cName
+  constraintName (Constraint _ _ cName _ _ _) = cName
 
   classDeclName :: Declaration -> Qualified (ProperName 'ClassName)
   classDeclName (TypeClassDeclaration _ pn _ _ _ _) = Qualified (ByModuleName name) pn
@@ -206,9 +206,9 @@ desugarDecl mn exps = go
   go d@(TypeClassDeclaration sa name args implies deps members) = do
     modify (M.insert (mn, name) (makeTypeClassData args (map memberToNameAndType members) implies deps False))
     return (Nothing, d : typeClassDictionaryDeclaration sa name args implies members : map (typeClassMemberToDictionaryAccessor mn name args) members)
-  go (TypeInstanceDeclaration sa chainId idx name deps className tys body) = do
+  go (TypeInstanceDeclaration sa chainId idx name deps ofs className tys body) = do
     name' <- desugarInstName name
-    let d = TypeInstanceDeclaration sa chainId idx (Right name') deps className tys body
+    let d = TypeInstanceDeclaration sa chainId idx (Right name') deps ofs className tys body
     let explicitOrNot = case body of
           DerivedInstance -> Left $ DerivedInstancePlaceholder className KnownClassStrategy
           NewtypeInstance -> Left $ DerivedInstancePlaceholder className NewtypeStrategy
@@ -280,7 +280,7 @@ typeClassDictionaryDeclaration
 typeClassDictionaryDeclaration sa name args implies members =
   let superclassTypes = superClassDictionaryNames implies `zip`
         [ function unit (foldl srcTypeApp (srcTypeConstructor (fmap (coerceProperName . dictTypeName) superclass)) tyArgs)
-        | (Constraint _ superclass _ tyArgs _) <- implies
+        | (Constraint _ _ superclass _ tyArgs _) <- implies
         ]
       members' = map (first runIdent . memberToNameAndType) members
       mtys = members' ++ superclassTypes
@@ -345,7 +345,7 @@ typeInstanceDictionaryDeclaration sa@(ss, _) name mn deps className tys decls =
       -- Create the type of the dictionary
       -- The type is a record type, but depending on type instance dependencies, may be constrained.
       -- The dictionary itself is a record literal.
-      superclassesDicts <- for typeClassSuperclasses $ \(Constraint _ superclass _ suTyArgs _) -> do
+      superclassesDicts <- for typeClassSuperclasses $ \(Constraint _ _ superclass _ suTyArgs _) -> do
         let tyArgs = map (replaceAllTypeVars (zip (map fst typeClassArguments) tys)) suTyArgs
         pure $ Abs (VarBinder ss UnusedIdent) (DeferredDictionary superclass tyArgs)
       let superclasses = superClassDictionaryNames typeClassSuperclasses `zip` superclassesDicts
@@ -376,5 +376,5 @@ typeClassMemberName = maybe (internalError "typeClassMemberName: Invalid declara
 superClassDictionaryNames :: [Constraint a] -> [Text]
 superClassDictionaryNames supers =
   [ superclassName pn index
-  | (index, Constraint _ pn _ _ _) <- zip [0..] supers
+  | (index, Constraint _ _ pn _ _ _) <- zip [0..] supers
   ]

@@ -380,10 +380,10 @@ updateTypes goType = (goDecl, goExpr, goBinder)
     implies' <- traverse (overConstraintArgs (traverse (goType' ss))) implies
     args' <- traverse (traverse (traverse (goType' ss))) args
     return $ TypeClassDeclaration sa name args' implies' deps decls
-  goDecl (TypeInstanceDeclaration sa@(ss, _) ch idx name cs className tys impls) = do
+  goDecl (TypeInstanceDeclaration sa@(ss, _) ch idx name cs ofs className tys impls) = do
     cs' <- traverse (overConstraintArgs (traverse (goType' ss))) cs
     tys' <- traverse (goType' ss) tys
-    return $ TypeInstanceDeclaration sa ch idx name cs' className tys' impls
+    return $ TypeInstanceDeclaration sa ch idx name cs' ofs className tys' impls
   goDecl (TypeSynonymDeclaration sa@(ss, _) name args ty) =
     TypeSynonymDeclaration sa name
       <$> traverse (traverse (traverse (goType' ss))) args
@@ -399,10 +399,10 @@ updateTypes goType = (goDecl, goExpr, goBinder)
 
   goExpr :: SourceSpan -> Expr -> m (SourceSpan, Expr)
   goExpr _ e@(PositionedValue pos _ _) = return (pos, e)
-  goExpr pos (TypeClassDictionary (Constraint ann name kinds tys info) dicts hints) = do
+  goExpr pos (TypeClassDictionary (Constraint ann ofs name kinds tys info) dicts hints) = do
     kinds' <- traverse (goType' pos) kinds
     tys' <- traverse (goType' pos) tys
-    return (pos, TypeClassDictionary (Constraint ann name kinds' tys' info) dicts hints)
+    return (pos, TypeClassDictionary (Constraint ann ofs name kinds' tys' info) dicts hints)
   goExpr pos (DeferredDictionary cls tys) = do
     tys' <- traverse (goType' pos) tys
     return (pos, DeferredDictionary cls tys')

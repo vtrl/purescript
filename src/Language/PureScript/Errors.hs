@@ -871,11 +871,11 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
             , markCodeBox $ indent $ line (showQualified runProperName nm)
             , line "because the class was not in scope. Perhaps it was not exported."
             ]
-    renderSimpleErrorMessage (NoInstanceFound (Constraint _ C.Fail _ [ ty ] _) _ _) | Just box <- toTypelevelString ty =
+    renderSimpleErrorMessage (NoInstanceFound (Constraint _ _ C.Fail _ [ ty ] _) _ _) | Just box <- toTypelevelString ty =
       paras [ line "A custom type error occurred while solving type class constraints:"
             , indent box
             ]
-    renderSimpleErrorMessage (NoInstanceFound (Constraint _ C.Partial
+    renderSimpleErrorMessage (NoInstanceFound (Constraint _ _ C.Partial
                                                           _
                                                           _
                                                           (Just (PartialConstraintData bs b))) _ _) =
@@ -887,13 +887,13 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
                   : [line "..." | not b]
             , line "Alternatively, add a Partial constraint to the type of the enclosing value."
             ]
-    renderSimpleErrorMessage (NoInstanceFound (Constraint _ C.Discard _ [ty] _) _ _) =
+    renderSimpleErrorMessage (NoInstanceFound (Constraint _ _ C.Discard _ [ty] _) _ _) =
       paras [ line "A result of type"
             , markCodeBox $ indent $ prettyType ty
             , line "was implicitly discarded in a do notation block."
             , line ("You can use " <> markCode "_ <- ..." <> " to explicitly discard the result.")
             ]
-    renderSimpleErrorMessage (NoInstanceFound (Constraint _ nm _ ts _) ambiguous unks) =
+    renderSimpleErrorMessage (NoInstanceFound (Constraint _ _ nm _ ts _) ambiguous unks) =
       paras [ line "No type class instance was found for"
             , markCodeBox $ indent $ Box.hsep 1 Box.left
                 [ line (showQualified runProperName nm)
@@ -1514,7 +1514,7 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
       paras [ detail
             , line $ "in foreign data type declaration for " <> markCode (runProperName nm)
             ]
-    renderHint (ErrorSolvingConstraint (Constraint _ nm _ ts _)) detail =
+    renderHint (ErrorSolvingConstraint (Constraint _ _ nm _ ts _)) detail =
       paras [ detail
             , line "while solving type class constraint"
             , markCodeBox $ indent $ Box.hsep 1 Box.left
@@ -1664,9 +1664,9 @@ prettyPrintSingleError (PPEOptions codeColor full level showDocs relPath) e = fl
       where
       isUnifyHint ErrorUnifyingTypes{} = True
       isUnifyHint _ = False
-    stripRedundantHints (NoInstanceFound (Constraint _ C.Coercible _ args _) _ _) = filter (not . isSolverHint)
+    stripRedundantHints (NoInstanceFound (Constraint _ _ C.Coercible _ args _) _ _) = filter (not . isSolverHint)
       where
-      isSolverHint (ErrorSolvingConstraint (Constraint _ C.Coercible _ args' _)) = args == args'
+      isSolverHint (ErrorSolvingConstraint (Constraint _ _ C.Coercible _ args' _)) = args == args'
       isSolverHint _ = False
     stripRedundantHints NoInstanceFound{} = stripFirst isSolverHint
       where

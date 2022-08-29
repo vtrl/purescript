@@ -33,6 +33,7 @@ import Language.PureScript.Sugar.Names.Exports
 import Language.PureScript.Sugar.Names.Imports
 import Language.PureScript.Traversals
 import Language.PureScript.Types
+import qualified Data.Text as Text
 
 -- |
 -- Replaces all local names with qualified names.
@@ -203,11 +204,13 @@ renameInModule imports (Module modSS coms mn decls exps) =
         <*> updateConstraints ss implies
         <*> pure deps
         <*> pure ds
-  updateDecl bound (TypeInstanceDeclaration sa@(ss, _) ch idx name cs cn ts ds) =
+  updateDecl bound (TypeInstanceDeclaration sa@(ss, _) ch idx name cs co cn ts ds) = do
+    let pos' = SourceSpan (spanName ss) co (SourcePos (sourcePosLine co) (sourcePosColumn co + Text.length (showQualified runProperName cn)))
     fmap (bound,) $
       TypeInstanceDeclaration sa ch idx name
         <$> updateConstraints ss cs
-        <*> updateClassName cn ss
+        <*> pure co
+        <*> updateClassName cn pos'
         <*> traverse updateTypesEverywhere ts
         <*> pure ds
   updateDecl bound (KindDeclaration sa kindFor name ty) =
@@ -349,13 +352,14 @@ renameInModule imports (Module modSS coms mn decls exps) =
     updateType (ConstrainedType ann c t) = ConstrainedType ann <$> updateInConstraint c <*> pure t
     updateType t = return t
     updateInConstraint :: SourceConstraint -> m SourceConstraint
-    updateInConstraint (Constraint ann@(ss, _) name ks ts info) =
-      Constraint ann <$> updateClassName name ss <*> pure ks <*> pure ts <*> pure info
+    updateInConstraint (Constraint ann@(ss, _) ofs name ks ts info) =
+      Constraint ann ofs <$> updateClassName name ss <*> pure ks <*> pure ts <*> pure info
 
   updateConstraints :: SourceSpan -> [SourceConstraint] -> m [SourceConstraint]
-  updateConstraints pos = traverse $ \(Constraint ann name ks ts info) ->
-    Constraint ann
-      <$> updateClassName name pos
+  updateConstraints pos = traverse $ \(Constraint ann ofs name ks ts info) -> do
+    let pos' = SourceSpan (spanName pos) ofs (SourcePos (sourcePosLine ofs) (sourcePosColumn ofs + Text.length (showQualified runProperName name)))
+    Constraint ann ofs
+      <$> updateClassName name pos'
       <*> traverse updateTypesEverywhere ks
       <*> traverse updateTypesEverywhere ts
       <*> pure info

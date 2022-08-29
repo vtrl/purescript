@@ -95,6 +95,9 @@ nullSourceSpan = internalModuleSourceSpan ""
 nullSourceAnn :: SourceAnn
 nullSourceAnn = (nullSourceSpan, [])
 
+pattern NullSourcePos :: SourcePos
+pattern NullSourcePos = (SourcePos 0 0)
+
 pattern NullSourceSpan :: SourceSpan
 pattern NullSourceSpan = SourceSpan "" (SourcePos 0 0) (SourcePos 0 0)
 

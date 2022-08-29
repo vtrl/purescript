@@ -225,7 +225,7 @@ entails SolverOptions{..} constraint context hints =
     ctorModules _ = Nothing
 
     findDicts :: InstanceContext -> Qualified (ProperName 'ClassName) -> QualifiedBy -> [TypeClassDict]
-    findDicts ctx cn = fmap (fmap NamedInstance) . foldMap NEL.toList . foldMap M.elems . (>>= M.lookup cn) . flip M.lookup ctx
+    findDicts ctx cn = fmap (fmap NamedInstance) . foldMap NEL.toList . foldMap M.elems . (M.lookup cn <=< flip M.lookup ctx)
 
     valUndefined :: Expr
     valUndefined = Var nullSourceSpan (Qualified (ByModuleName C.Prim) (Ident C.undefined))
@@ -234,8 +234,8 @@ entails SolverOptions{..} constraint context hints =
     solve = go 0 hints
       where
         go :: Int -> [ErrorMessageHint] -> SourceConstraint -> WriterT (Any, [(Ident, InstanceContext, SourceConstraint)]) (StateT InstanceContext m) Expr
-        go work _ (Constraint _ className' _ tys' _) | work > 1000 = throwError . errorMessage $ PossiblyInfiniteInstance className' tys'
-        go work hints' con@(Constraint _ className' kinds' tys' conInfo) = WriterT . StateT . (withErrorMessageHint (ErrorSolvingConstraint con) .) . runStateT . runWriterT $ do
+        go work _ (Constraint _ _ className' _ tys' _) | work > 1000 = throwError . errorMessage $ PossiblyInfiniteInstance className' tys'
+        go work hints' con@(Constraint _ _ className' kinds' tys' conInfo) = WriterT . StateT . (withErrorMessageHint (ErrorSolvingConstraint con) .) . runStateT . runWriterT $ do
             -- We might have unified types by solving other constraints, so we need to
             -- apply the latest substitution.
             latestSubst <- lift . lift $ gets checkSubstitution
@@ -831,14 +831,14 @@ newDictionaries
   -> Qualified Ident
   -> SourceConstraint
   -> m [NamedDict]
-newDictionaries path name (Constraint _ className instanceKinds instanceTy _) = do
+newDictionaries path name (Constraint _ _ className instanceKinds instanceTy _) = do
     tcs <- gets (typeClasses . checkEnv)
     let TypeClassData{..} = fromMaybe (internalError "newDictionaries: type class lookup failed") $ M.lookup className tcs
-    supDicts <- join <$> zipWithM (\(Constraint ann supName supKinds supArgs _) index ->
+    supDicts <- join <$> zipWithM (\(Constraint ann ofs supName supKinds supArgs _) index ->
                                       let sub = zip (map fst typeClassArguments) instanceTy in
                                       newDictionaries ((supName, index) : path)
                                                       name
-                                                      (Constraint ann supName
+                                                      (Constraint ann ofs supName
                                                         (replaceAllTypeVars sub <$> supKinds)
                                                         (replaceAllTypeVars sub <$> supArgs)
                                                         Nothing)

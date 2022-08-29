@@ -387,7 +387,7 @@ debugType :: Type a -> String
 debugType = init . prettyPrintType 100
 
 debugConstraint :: Constraint a -> String
-debugConstraint (Constraint ann clsName kinds args _) =
+debugConstraint (Constraint ann _ clsName kinds args _) =
   debugType $ foldl (TypeApp ann) (foldl (KindApp ann) (TypeConstructor ann (fmap coerceProperName clsName)) kinds) args
 
 debugTypes :: Environment -> [String]

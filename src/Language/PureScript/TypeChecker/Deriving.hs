@@ -61,7 +61,7 @@ deriveInstance instType className strategy = do
       unaryClass f = case tys of
         [ty] -> case unwrapTypeConstructor ty of
           Just (Qualified (ByModuleName mn') tyCon, _, _) | mn == mn' -> do
-            let superclassesDicts = flip map typeClassSuperclasses $ \(Constraint _ superclass _ suTyArgs _) ->
+            let superclassesDicts = flip map typeClassSuperclasses $ \(Constraint _ _ superclass _ suTyArgs _) ->
                   let tyArgs = map (replaceAllTypeVars (zip (map fst typeClassArguments) tys)) suTyArgs
                   in lam UnusedIdent (DeferredDictionary superclass tyArgs)
             let superclasses = map mkString (superClassDictionaryNames typeClassSuperclasses) `zip` superclassesDicts

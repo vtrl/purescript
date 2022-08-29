@@ -183,7 +183,7 @@ lintUnused (Module modSS _ mn modDecls exports) =
         in
           (vars, errs')
 
-    goDecl (TypeInstanceDeclaration _ _ _ _ _ _ _ (ExplicitInstance decls)) = mconcat $ map goDecl decls
+    goDecl (TypeInstanceDeclaration _ _ _ _ _ _ _ _ (ExplicitInstance decls)) = mconcat $ map goDecl decls
     goDecl _ = mempty
 
     go :: Expr -> (S.Set Ident, MultipleErrors)
@@ -259,9 +259,9 @@ lintUnused (Module modSS _ mn modDecls exports) =
     declIdents _ = (S.empty, S.empty)
 
     onDecls :: [ Declaration ] -> (S.Set Ident, MultipleErrors) -> (S.Set Ident, MultipleErrors)
-    onDecls ds errs = 
-      let 
-        onDecl d (accErrs, accLetNamesRec) = 
+    onDecls ds errs =
+      let
+        onDecl d (accErrs, accLetNamesRec) =
             let (letNames, recNames) = declIdents d
                 dErrs = underDecl d
                 errs' = dErrs <> removeAndWarn letNames accErrs
@@ -290,7 +290,7 @@ lintUnused (Module modSS _ mn modDecls exports) =
       let newNames = S.map snd newNamesWithSpans
           filteredUsed = used `S.difference` newNames
           warnUnused = S.filter (not . Text.isPrefixOf "_" . runIdent) (newNames `S.difference` used)
-          warnUnusedSpans = S.filter (\(_,ident) -> ident `elem` warnUnused) newNamesWithSpans 
+          warnUnusedSpans = S.filter (\(_,ident) -> ident `elem` warnUnused) newNamesWithSpans
           combinedErrors = if not $ S.null warnUnusedSpans then errors <> mconcat (map (\(ss,ident) -> errorMessage' ss $ UnusedName ident) $ S.toList warnUnusedSpans) else errors
       in
         (filteredUsed, combinedErrors)

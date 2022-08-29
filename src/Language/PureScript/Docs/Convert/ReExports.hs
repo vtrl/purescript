@@ -177,7 +177,7 @@ collectDeclarations reExports = do
       mapMaybe (\(exportSrc, ref) -> (,exportSrc) <$> f ref) reExports
 
   expCtors :: [P.ProperName 'P.ConstructorName]
-  expCtors = concatMap (fromMaybe [] . (>>= snd) . P.getTypeRef . snd) reExports
+  expCtors = concatMap (fromMaybe [] . (snd <=< (P.getTypeRef . snd))) reExports
 
 lookupValueDeclaration ::
   forall m.
@@ -512,7 +512,7 @@ typeClassConstraintFor :: Declaration -> Maybe Constraint'
 typeClassConstraintFor Declaration{..} =
   case declInfo of
     TypeClassDeclaration tyArgs _ _ ->
-      Just (P.Constraint () (P.Qualified P.ByNullSourcePos (P.ProperName declTitle)) [] (mkConstraint tyArgs) Nothing)
+      Just (P.Constraint () P.NullSourcePos (P.Qualified P.ByNullSourcePos (P.ProperName declTitle)) [] (mkConstraint tyArgs) Nothing)
     _ ->
       Nothing
   where

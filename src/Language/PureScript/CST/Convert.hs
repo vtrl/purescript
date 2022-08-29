@@ -37,6 +37,7 @@ import qualified Language.PureScript.Types as T
 import Language.PureScript.CST.Positions
 import Language.PureScript.CST.Print (printToken)
 import Language.PureScript.CST.Types
+import Language.PureScript.AST.SourcePos (SourceSpan(spanStart))
 
 comment :: Comment a -> Maybe C.Comment
 comment = \case
@@ -201,7 +202,8 @@ convertConstraint fileName = go
   go = \case
     cst@(Constraint _ name args) -> do
       let ann = uncurry (sourceAnnCommented fileName) $ constraintRange cst
-      T.Constraint ann (qualified name) [] (convertType fileName <$> args) Nothing
+          ann' = spanStart $ fst $ uncurry (sourceAnnCommented fileName) $ qualRange name
+      T.Constraint ann ann' (qualified name) [] (convertType fileName <$> args) Nothing
     ConstraintParens _ (Wrapped _ c _) -> go c
 
 convertGuarded :: String -> Guarded a -> [AST.GuardedExpr]
@@ -477,9 +479,11 @@ convertDeclaration fileName decl = case decl of
       chainId = mkChainId fileName $ startSourcePos $ instKeyword $ instHead $ sepHead insts
       goInst ix inst@(Instance (InstanceHead _ nameSep ctrs cls args) bd) = do
         let ann' = uncurry (sourceAnnCommented fileName) $ instanceRange inst
+            ofs = spanStart $ fst $ uncurry (sourceAnnCommented fileName) $ qualRange cls
         AST.TypeInstanceDeclaration ann' chainId ix
           (mkPartialInstanceName nameSep cls args)
           (convertConstraint fileName <$> maybe [] (toList . fst) ctrs)
+          ofs
           (qualified cls)
           (convertType fileName <$> args)
           (AST.ExplicitInstance $ goInstanceBinding <$> maybe [] (NE.toList . snd) bd)
@@ -493,6 +497,7 @@ convertDeclaration fileName decl = case decl of
         | otherwise = AST.DerivedInstance
     pure $ AST.TypeInstanceDeclaration ann chainId 0 name'
       (convertConstraint fileName <$> maybe [] (toList . fst) ctrs)
+      (spanStart $ fst $ uncurry (sourceAnnCommented fileName) $ qualRange cls)
       (qualified cls)
       (convertType fileName <$> args)
       instTy
