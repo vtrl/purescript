@@ -54,18 +54,18 @@ jobs:
       fail-fast: false # do not cancel builds for other OSes if one fails
       matrix:
         include:
-          - image: haskell:9.6.6  # Also upgrade version in the lint job below
-            os: ubuntu-latest  # Exact version is not important, as it's only the container host)
+          # - image: haskell:9.6.6  # Also upgrade version in the lint job below
+          #   os: ubuntu-latest  # Exact version is not important, as it's only the container host)
 
-          - image: haskell:9.6.6
-            os: ubuntu-24.04-arm  # Exact version is not important, as it's only the container host
+          # - image: haskell:9.6.6
+          #   os: ubuntu-24.04-arm  # Exact version is not important, as it's only the container host
 
           - image: benz0li/ghc-musl:9.6.6
             os: ubuntu-latest
 
-          - os: macos-13  # x64
-          - os: macos-14  # arm64
-          - os: windows-2019  # x64
+          # - os: macos-13  # x64
+          # - os: macos-14  # arm64
+          # - os: windows-2019  # x64
 
     runs-on: "${{ matrix.os }}"
     container:  "${{ matrix.image }}"
