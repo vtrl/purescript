@@ -92,6 +92,11 @@ jobs:
         with:
           node-version: "22"
 
+      - name: "(Static only) Install Node"
+        if: startsWith(matrix.image, 'benz0li')
+        run: |
+          apk add nodejs
+
       - id: "haskell"
         name: "(Non-Linux only) Install Haskell"
         if: startsWith(matrix.os, 'macos') || startsWith(matrix.os, 'windows')
