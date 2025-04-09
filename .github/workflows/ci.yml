@@ -109,7 +109,7 @@ jobs:
           stack-no-global: true
 
       - name: "(Linux only) Fix working directory ownership"
-        if: startsWith(matrix.image, 'haskell')
+        if: ${{ startsWith(matrix.image, 'haskell') || startsWith(matrix.image, 'benz0li') }}
         run: |
           chown root:root .
 
