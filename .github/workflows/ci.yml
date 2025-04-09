@@ -70,7 +70,7 @@ jobs:
     runs-on: "${{ matrix.os }}"
     container:  "${{ matrix.image }}"
     env:
-      STACK_OPTS: "${{ matrix.image == 'ghc-musl:9.6.6' && '--flag: purescript:static' || '' }}"
+      STACK_OPTS: "${{ matrix.image == 'benz0li/ghc-musl:9.6.6' && '--flag: purescript:static' || '' }}"
 
     outputs:
       do-not-prerelease: "${{ steps.build.outputs.do-not-prerelease }}"
