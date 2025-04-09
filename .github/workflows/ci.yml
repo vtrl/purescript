@@ -96,7 +96,7 @@ jobs:
       - name: "(Static only) Install Node"
         if: startsWith(matrix.image, 'benz0li')
         run: |
-          apk add nodejs
+          apk add nodejs npm
 
       - id: "haskell"
         name: "(Non-Linux only) Install Haskell"
