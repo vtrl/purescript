@@ -2,7 +2,7 @@ name: "CI"
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "justin/ghc-musl" ]
   pull_request:
     branches: [ "master" ]
     paths:
@@ -60,12 +60,17 @@ jobs:
           - image: haskell:9.6.6
             os: ubuntu-24.04-arm  # Exact version is not important, as it's only the container host
 
+          - image: ghc-musl:9.6.6
+            os: ubuntu-latest
+
           - os: macos-13  # x64
           - os: macos-14  # arm64
           - os: windows-2019  # x64
 
     runs-on: "${{ matrix.os }}"
     container:  "${{ matrix.image }}"
+    env:
+      STACK_OPTS: "${{ matrix.image == 'ghc-musl:9.6.6' && '--flag: purescript:static' || '' }}"
 
     outputs:
       do-not-prerelease: "${{ steps.build.outputs.do-not-prerelease }}"
