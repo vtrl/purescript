@@ -1,12 +1,15 @@
 # Five equal-leaf unification guards: uncached compiler trial
 
-**Recommendation: hold as an allocation-reduction candidate; do not integrate
-or claim a speedup yet.** The requested one-pair normal-O2 N4 screen saved
-1.651% allocation (6.565 GB), but the measured candidate was 2.672% slower.
-Warm-up wall/RSS/residency differences had the opposite direction, so these
-metrics need counterbalanced verification. No repeat, N1, or additional variant
-was run. The source remains provisional and separate from the prior varIfUnknown
-trial, with all evidence preserved for lead prioritization.
+**Final recommendation: close the leaf-guard trial without integration or
+further measurements.** The allocation reduction is real: 1.651% in the N4
+package-set screen and 1.672% in each of five dense N1 pairs. However, the N4
+screen and noisy dense timing did not meet the campaign's acceptance gate.
+This is a **screening decision, not proof of a population slowdown**; no new
+numeric threshold or statistical certainty is asserted. The conditional N4
+four-pair confirmation was not started, and no full-package-set N1 run or source
+variant was added. Original authorship, source/test separation, all samples,
+and immutable screen evidence are preserved. The prior varIfUnknown trial is
+not included or changed.
 
 ## Scope and provenance
 
@@ -195,13 +198,108 @@ because warning ordering was already nondeterministic. Exact checks are saved
 in `.build/perf/unify-leaf/warnings-equality.json`.
 
 This complete first screen was reported to the lead before any repetition.
-No further timing was launched. The allocation signal makes this worth retaining
-for independent counterbalanced verification if prioritized, but does not
-justify integrating it despite the measured wall regression. Combining it with
-other optimizations, N1/dense workloads, and larger workloads remains unverified.
-Correctness tests and corpus equality support the five-clause adaptation; they
-do not prove universal performance equivalence or eliminate evaluation-order
-effects outside valid, finite compiler state.
+The lead then authorized a dense1000 N1 five-pair gate, conditional on which
+the trial could proceed to a separate N4 four-pair confirmation. The dense gate
+below did not provide a clear time pass; the worker withheld that N4 block, and
+the lead explicitly closed the trial without further measurement or integration.
+The favorable allocation screen is not pooled with dense results. Composition
+with other optimizations, full-package-set N1, and larger workloads remain
+unverified. Correctness tests and corpus equality support the five-clause
+adaptation, not universal performance equivalence.
+
+## Dense1000 N1 gate: complete series retained, no N4 advancement
+
+The source and screen report were preserved in
+[99e3ed3a](https://github.com/vtrl/purescript/commit/99e3ed3adef2fd2ae067a9bd69a6d8ec26b51aaa)
+before this follow-up. The original screen archive was made read-only and was
+not overwritten. The exact Make and leaf-guard binaries above were unchanged;
+no build, test, other benchmark, or profiling process overlapped the dense runs.
+
+The lead-provided archive
+`.amp/in/artifacts/performance-20260910/binding-dense-regression.tar.gz` was
+downloaded into `.build/perf/unify-leaf/binding-dense-regression.tar.gz`, SHA-256
+`f669d9970eea4e687b56be8b9dc222a56afe8bb47a6e4301c07024a218e922d6`.
+Only the dense1000 source and manifests were extracted into the new ignored
+directory `.build/perf/unify-leaf-dense/dense-recursive-1000`.
+
+- `Dense.purs` SHA-256:
+  `408e5f107f6b2202d3efb86a2660b089030545a3faef54b3abf9d7b021d9f5a7`.
+- Input-manifest SHA-256:
+  `6b017a4d18606d78ffc298ad87528ffe1ae7e8848f763c4fd8ed345e7d910e6d`.
+- One module, 1,000 typed `Int -> Int` functions forming a mutual-recursion
+  cycle, Prim only. **Compilation only; no cycle function was executed.**
+- Both local binaries used the exact same source and output paths. The archived
+  foreign-orb compiler outputs were not used for equality: externs embed paths.
+
+```sh
+env -u HSPEC_ACCEPT -u GHCRTS CI=true python3 ci/benchmark-compiler.py \
+  --corpus .build/perf/unify-leaf-dense/dense-recursive-1000 \
+  --baseline .build/perf/purs-parse-release \
+  --compiler .build/perf/purs-unify-leaf-tested-release \
+  --capabilities 1 --samples 5 \
+  --results .build/perf/unify-leaf/dense-n1-five-pair \
+  --label fe186599-normal-O2-leaf-guards-dense1000-vs-exact-Make
+```
+
+Five pairs ran B/C, C/B, B/C, C/B, B/C after an excluded clean warm-up each;
+output was deleted before all 12 compiles. Every sample and outlier is retained.
+
+| Pair | Order | Baseline wall s | Candidate wall s | Wall change | Baseline RSS KiB | Candidate RSS KiB |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | B/C | 1.03 | 0.92 | −10.680% | 145,032 | 146,100 |
+| 2 | C/B | 0.92 | 1.10 | +19.565% | 144,956 | 146,188 |
+| 3 | B/C | 0.94 | 1.04 | +10.638% | 144,840 | 146,120 |
+| 4 | C/B | 0.95 | 1.14 | +20.000% | 144,784 | 146,116 |
+| 5 | B/C | 1.29 | 1.12 | −13.178% | 145,036 | 146,092 |
+
+Every measured baseline sample allocated 1,186,711,528 bytes with sampled
+residency 59,260,184 bytes. Every candidate sample allocated 1,166,870,760 bytes
+with sampled residency 59,634,104 bytes. Their within-binary sample SDs are zero.
+Allocation decreased by 19,840,768 bytes in each pair; no outlier filtering is
+needed to obtain that result.
+
+| Metric | Baseline mean ± sample SD | Candidate mean ± sample SD | Mean paired change ± sample SD |
+| --- | ---: | ---: | ---: |
+| Wall seconds | 1.026 ± 0.15339 | 1.064 ± 0.08877 | +5.269% ± 16.162 pp |
+| Peak RSS KiB | 144,929.6 ± 113.722 | 146,123.2 ± 37.989 | +0.82362% ± 0.08707 pp |
+| Allocated bytes | 1,186,711,528 ± 0 | 1,166,870,760 ± 0 | −1.67191% ± 0 pp |
+| Sampled residency bytes | 59,260,184 ± 0 | 59,634,104 ± 0 | +0.63098% ± 0 pp |
+
+SD is sample standard deviation, not a confidence interval; pp means percentage
+points. Ratio of mean wall times is +3.704%, different from mean paired change.
+Median wall times are 0.95 s baseline and 1.10 s candidate (+15.79%); median
+paired wall change is +10.638%. The full monotonic timings also show a positive
+mean paired change (+4.879% with SD 16.201 pp), so centisecond GNU-time rounding
+alone does not explain the uncertainty. No sample is removed, including the
+1.29 s baseline in pair 5.
+
+Excluded warm-ups: baseline 0.90 s, RSS 144,844 KiB; candidate 0.95 s, RSS
+146,112 KiB. Warm-up allocation and residency match their respective measured
+constants above. These warm-ups are not counted among the five pairs.
+
+The candidate's small memory increases (mean RSS +1,193.6 KiB, sampled residency
++373,920 bytes) do not resemble the large regression this fixture originally
+screened for. Timing, however, was not a clear pass: three pairs were 10.6–20%
+slower, with substantial variance and two pairs faster. The worker conservatively
+withheld the conditional N4 block and reported all data; the lead then directed
+closure without further repetitions. This does **not** establish a population
+slowdown, but it does not meet the requested acceptance gate either. No threshold
+was introduced after observing the samples.
+
+Both local generated products matched after every repetition, including both
+warm-ups, and all 12 stdout files were empty:
+
+| Local product | SHA-256 |
+| --- | --- |
+| `Dense/index.js` | `079232515f42ec7e346d13a33a75736252964eccdebc46e8f18af72d01db0103` |
+| `Dense/externs.cbor` | `c56409af09633c8f2609e67ce148dc2ff3cca0f9c911a8f7a3d788c830a21cce` |
+| `products.json` | `fbb08324067d6736d68bb8c7baad92a722b68d0d0f5f8ce044b1b044b83aa296` |
+
+These are local-path products, not asserted cross-orb externs hashes. The final
+checks are saved in `.build/perf/unify-leaf/dense-equality.json`. Raw per-run
+stdout/stderr/time, samples, summaries, pair changes, commands, and machine
+metadata are preserved without filtering. Across the screen and dense gate,
+16 full clean compilations ran: six measured pairs and four excluded warm-ups.
 
 ## Raw evidence and follow-up
 
@@ -210,15 +308,24 @@ Raw records are under `.build/perf/unify-leaf/`, including the exact source patc
 baseline/candidate focused tests, full suite, build timing/log, hardware/toolchain
 identity, and all screen stdout/stderr/time/metadata/products/samples/summaries.
 The measured candidate can be retrieved with `download_thread_file` at the path
-above. Keep any integration provisional until independent measurements and
-combined campaign checks; no master merge is authorized by this worker trial.
+above. This source was not accepted for integration; no further measurement or
+master merge is authorized by this worker trial.
 
-Transfer bundle: `.build/perf/unify-leaf-evidence.tar.gz`, with adjacent
-`.sha256` file. It contains this report, the full raw trial directory, and corpus
-manifests, but not the compiler binaries or downloaded package sources. Extract
-into a new directory to preserve existing lead files. The exact candidate is
-available separately at `.build/perf/purs-unify-leaf-tested-release`.
+The original screen bundle `.build/perf/unify-leaf-evidence.tar.gz` is immutable
+(mode 0444), 1,053,007 bytes, SHA-256
+`97a4166b0ae802abfb9901e12859cb2ad3829461daed764c35ef686ff73eb888`.
+It contains the original screen report and raw records, without dense results.
+A copy was uploaded to the lead at
+`.build/perf/unify-leaf-worker-screen-evidence.tar.gz`.
+
+The separate final bundle is `.build/perf/unify-leaf-dense-final-evidence.tar.gz`,
+with adjacent `.sha256` file. It contains this updated report, the full raw trial
+directory, and dense/package-set source manifests, but not compiler binaries or
+downloaded package-set sources. Extract into a new directory to preserve existing
+lead files. The exact candidate is available separately at
+`.build/perf/purs-unify-leaf-tested-release`.
 
 Source adaptation, tests, and report are separate commits, so the evidence can
 be retained without integrating the source. The worker remains unarchived for
 follow-up; no work on the earlier allocation-only candidate was overwritten.
+This closure does not start a new assignment or another unifier variant.
