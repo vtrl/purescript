@@ -1,13 +1,16 @@
-# Specialization flags: first N4 screen and build costs
+# Specialization flags: separate N4 screen and confirmation
 
-The combined flags produce a credible screening signal, not an accepted
-performance result: one measured N4 pair reduces wall time by 32.67% and
-allocation by 43.62%, while RSS rises 3.07% and sampled residency rises 9.29%.
-The stripped executable grows 47.32%. Full optimized correctness passes.
-One fresh five-pair N4 confirmation is approved on this existing orb; its
-results will remain separate from this screen. The lead owns independent
-N1/N8 verification. No repeated N4, N1, N8, or traversal-INLINABLE interaction
-measurements are included at this checkpoint.
+The fresh five-pair N4 confirmation supports an isolated workload improvement:
+mean paired wall time falls **29.586%**, allocation falls **43.630%**, RSS rises
+**4.193%**, and sampled residency rises **6.134%**. All five pairs are faster.
+Full optimized correctness passes; the stripped executable grows **47.322%**.
+Baseline wall time drifts downward, so the paired results and variance matter.
+
+The first screen below remains separate and is not pooled with confirmation.
+Its original report is preserved at
+[5cffa728](https://github.com/vtrl/purescript/commit/5cffa728b8cd7dfc3c0e4e87091c66f486dce733).
+The lead owns independent N1/N8 verification. This worker made no traversal,
+warning-force, source, dependency, or RTS-default combination.
 
 ## Upstream provenance and exact scope
 
@@ -158,7 +161,7 @@ and sampled residency increase in both comparisons. Repeated counterbalanced
 N4 pairs and lead-owned independent N1/N8 verification are warranted before
 acceptance. This screen's timing point is not accepted.
 
-## Correctness, evidence, and next decision
+## Screen correctness and checkpoint decision
 
 The harness exited 0 without interruption. All **8,985 products** match across
 all four runs and the accepted-Make reference: 4,084 JS outputs, 817 foreign
@@ -193,3 +196,117 @@ an atomic started-directory guard prevents reexecution, command exit status
 is recorded, and the wrapper then sleeps until evidence collection and
 service shutdown. Missing completion status after interruption is reported
 as partial evidence; it must never cause a blind rerun. No portal is needed.
+
+## Fresh N4 confirmation: five complete counterbalanced pairs
+
+The approved confirmation ran once from 2026-09-10 13:26:15 UTC through
+13:47:25 UTC on the same existing orb. Managed service
+`specialization-n4-confirmation` used the ignored guarded wrapper
+`.build/perf/specialization-trial/run-n4-confirmation.sh`. It recorded exit 0,
+then slept; the service was stopped after evidence collection. No interruption,
+restart, additional compile, concurrent build/test, or sample exclusion occurred.
+
+```sh
+python3 ci/benchmark-compiler.py --corpus .build/perf/corpus \
+  --compiler .build/perf/purs-specialization \
+  --baseline .build/perf/purs-parse-release \
+  --capabilities 4 --samples 5 \
+  --results .build/perf/specialization-trial/n4-confirmation \
+  --label accepted-Make-38080a40-vs-specialization-c7df45fb-confirmation
+```
+
+Both immutable binaries, the exact e926 harness, and pinned corpus are the
+same as in the screen. Every run is a clean compile, with explicit N4 and no
+extra RTS flags. Two full warm-ups are excluded; five pairs follow in
+BC/CB/BC/CB/BC order (B = accepted Make, C = specialization flags).
+
+| Excluded confirmation warm-up | Wall s | RSS KiB | Allocated bytes | Sampled residency bytes |
+| --- | ---: | ---: | ---: | ---: |
+| B | 119.28 | 1982940 | 397648426776 | 691899336 |
+| C | 90.22 | 1959448 | 224161299456 | 678676672 |
+
+All measured pairs, including high-memory and slower observations:
+
+| Pair | Order | B wall s | C wall s | Wall change | B RSS KiB | C RSS KiB | B residency bytes | C residency bytes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | BC | 129.14 | 85.73 | −33.614682% | 1954300 | 2121312 | 711570432 | 774015144 |
+| 2 | CB | 124.19 | 86.63 | −30.243981% | 2009328 | 2018668 | 723093728 | 680790288 |
+| 3 | BC | 123.51 | 86.45 | −30.005668% | 2026700 | 2003412 | 718375856 | 742598408 |
+| 4 | CB | 120.12 | 87.54 | −27.122877% | 2059804 | 2206288 | 716023816 | 792485976 |
+| 5 | BC | 118.51 | 86.58 | −26.942874% | 1980744 | 2099444 | 671263968 | 763178744 |
+
+Means ± sample SD, using only the five measured observations per binary.
+The final column is the mean ± SD of the five within-pair percentage changes,
+not the percentage change between group means; its SD is in percentage points.
+
+| Metric | B mean ± SD | C mean ± SD | Paired change % ± SD |
+| --- | ---: | ---: | ---: |
+| Wall s | 123.094 ± 4.116616 | 86.586 ± 0.644849 | −29.586016 ± 2.733698 |
+| Peak RSS KiB | 2006175.2 ± 40758.551436 | 2089824.8 ± 82428.926835 | +4.193179 ± 4.276131 |
+| Allocated bytes | 397634323360 ± 12948680.320863 | 224148015707.2 ± 7148853.299261 | −43.629611 ± 0.002135 |
+| Sampled residency bytes | 708065560 ± 20988825.461875 | 750613712 ± 43006828.465354 | +6.133728 ± 7.681501 |
+| Copied bytes | 68010227300.8 ± 346584965.439354 | 62343292113.6 ± 698172828.788398 | −8.326984 ± 1.448066 |
+| MUT elapsed s | 55.878 ± 1.381765 | 37.1506 ± 0.438051 | −33.479980 ± 1.925344 |
+| MUT CPU s | 192.5698 ± 5.657868 | 126.4112 ± 1.860581 | −34.304557 ± 2.372355 |
+| GC elapsed s | 67.1318 ± 2.791189 | 49.343 ± 0.411580 | −26.380044 ± 3.564609 |
+| GC CPU s | 137.1858 ± 5.792298 | 99.3422 ± 0.741836 | −27.470446 ± 3.429551 |
+| Minor collections | 33918.8 ± 57.155052 | 20532.6 ± 61.654684 | −39.465377 ± 0.174457 |
+| Major collections | 61.2 ± 0.447214 | 54.4 ± 0.894427 | −11.105235 ± 1.739491 |
+
+The mean paired wall difference is −36.508 s (SD 4.621587 s). Baseline wall
+times decline from 129.14 to 118.51 s; candidate times range 85.73–87.54 s.
+Every pair favors the candidate, but effects shrink from 33.615% to 26.943%
+across the block. This drift limits precision and generalization; neither the
+first confirmation pair nor the separate 32.666% screen is the final estimate.
+No outlier was discarded. Allocation is much more stable than time or memory.
+
+### Confirmation correctness and evidence audit
+
+The saved-evidence audit passed: **12 completed runs, five measured pairs,
+8,985 equal products, and 745 equal warning-content multisets**. The harness
+checked products after every run outside timing; the independent audit also
+compared the final products and the screen/reference manifest. Product and
+warning-content manifest hashes remain the exact values above.
+
+All 12 warning sequences differ, including baseline repetitions, but content
+and multiplicity match after removing only numbered warning headers and outer
+body whitespace. Internal text/whitespace are preserved. This is preexisting
+ordering nondeterminism, not a whole-stdout hash failure or a content regression.
+
+All 4,901 input hashes, both binary hashes, and the harness hash were rechecked.
+The audit reparsed GNU-time and RTS statistics, matched saved sample rows, and
+independently recomputed all summary and explicitly matched pair statistics.
+Full-precision values, individual allocations, pause/collection statistics,
+and raw stdout/stderr/time files are in `n4-confirmation/analysis.json` and
+the accompanying raw run files. `n4-screen/` remains a separate dataset.
+
+Evidence archive: `.amp/in/artifacts/specialization-flags-20260910-evidence.tar.gz`
+(2,491,252 bytes), SHA256
+`267b98d0d5bbcdde20387e02962f329fe877fd77a23549d71f41e786812dd51d`.
+It contains both datasets, audit code/output, guarded wrapper and exit status,
+build/test logs, GHC arguments, binary identities, exact harness and corpus
+manifests, upstream patch, and applied flags patch. `build-summary.json`
+identifies the initial compiler-only build; `tested-binary.json` identifies
+the different final test-enabled binary actually used for every benchmark.
+
+The tested executable stays read-only (mode 0555) at
+`.build/perf/purs-specialization`, **70,523,064 bytes**, SHA256
+`4a918e8fe3b147cf1bd24adf26cc8286d3d72dbc0f5dbe928aa563166fd773c1`.
+No initial-build binary substitution occurred.
+
+### Recommendation: retain for gated integration, not discard
+
+N4 confirmation and unchanged correctness justify retaining the isolated
+upstream flags candidate for the lead's integration decision. The evidence
+supports a substantial clean-package-set N4 improvement on this machine, not
+universal compiler or startup performance. Condition broader acceptance on
+the lead-owned independent N1/N8 results and acceptance of the costs:
+47.322% executable growth, roughly 4 GiB compiler-build RSS, and higher mean
+workload RSS/residency despite lower allocation. No relative build-time gain
+or regression can be quantified without a matched baseline build.
+
+This worker's scope is complete: one screen and one separate five-pair N4
+confirmation, normal optimized full suite 1302/0, and attributed configuration
+only. No additional N1/N8, tiny, cold, incremental, IDE, or interaction trials
+were run here. Do not assume additive gains with traversal-INLINABLE or
+warning-force changes; those require a separately coordinated trial.
