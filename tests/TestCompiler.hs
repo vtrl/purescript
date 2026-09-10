@@ -28,9 +28,12 @@ import Language.PureScript qualified as P
 import Language.PureScript.Interactive.IO (readNodeProcessWithExitCode)
 
 import Control.Arrow ((>>>))
+import Control.Monad.State (StateT, evalStateT, gets, modify)
+import Data.Bifunctor (first)
 import Data.ByteString qualified as BS
 import Data.Function (on)
 import Data.List (sort, stripPrefix, minimumBy)
+import Data.Map qualified as M
 import Data.Maybe (mapMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as T
@@ -47,14 +50,110 @@ import Text.Regex.Base (RegexContext(..), RegexMaker(..))
 import Text.Regex.TDFA (Regex)
 
 import TestUtils (ExpectedModuleName(..), SupportModules, compile, createOutputFile, getTestFiles, goldenVsString, modulesDir, trim)
-import Test.Hspec (Expectation, SpecWith, beforeAllWith, describe, expectationFailure, it, runIO)
+import Test.Hspec (Expectation, SpecWith, beforeAllWith, describe, expectationFailure, it, runIO, shouldBe)
 
 spec :: SpecWith SupportModules
 spec = do
+  bindingVisibilityTests
   passingTests
   warningTests
   failingTests
   optimizeTests
+
+bindingVisibilityTests :: SpecWith SupportModules
+bindingVisibilityTests = describe "Binding visibility" $ do
+  it "promotes supplied undefined names without changing types, kinds or defined names" $ \_ -> do
+    run (P.makeBindingGroupVisible >> snapshot) `shouldBe` Right visible
+    run (P.makeBindingGroupVisible >> P.makeBindingGroupVisible >> snapshot) `shouldBe` Right visible
+
+  it "honors both directions of shadowing and restores the whole names scope" $ \_ -> do
+    let shadows = M.fromList
+          [ (a, (P.tyString, P.Public, P.Defined))
+          , (b, (P.tyInt, P.Private, P.Undefined))
+          , (c, (P.tyBoolean, P.Private, P.Undefined))
+          ]
+        promoted = M.fromList
+          [ (a, (P.tyString, P.Public, P.Defined))
+          , (b, (P.tyInt, P.Private, P.Defined))
+          , (c, (P.tyBoolean, P.Private, P.Defined))
+          ]
+        action = do
+          inside <- P.bindNames shadows $ do
+            before <- snapshot
+            P.makeBindingGroupVisible
+            after <- snapshot
+            pure [before, after]
+          restored <- snapshot
+          P.makeBindingGroupVisible
+          after <- snapshot
+          pure (inside ++ [restored, after])
+    run action `shouldBe` Right [shadows, promoted, initial, visible]
+
+  it "restores each nested visible scope, including bindings introduced inside it" $ \_ -> do
+    let local = M.singleton c (P.tyBoolean, P.Private, P.Undefined)
+        localVisible = M.singleton c (P.tyBoolean, P.Private, P.Defined)
+        action = do
+          inside <- P.withBindingGroupVisible $ do
+            outer <- snapshot
+            nested <- P.bindNames local $ do
+              inner <- P.withBindingGroupVisible snapshot
+              restored <- snapshot
+              pure [inner, restored]
+            restored <- snapshot
+            modify $ \st -> st { P.checkNextType = 17 }
+            pure (outer : nested ++ [restored])
+          restored <- snapshot
+          P.makeBindingGroupVisible
+          after <- snapshot
+          nextType <- gets P.checkNextType
+          pure (inside ++ [restored, after], nextType)
+    run action `shouldBe` Right
+      ([visible, localVisible `M.union` visible, local `M.union` visible, visible, initial, visible], 17)
+
+  it "observes arbitrary environment replacements and preserves non-name state changes" $ \_ -> do
+    let replacement = M.singleton c (P.tyBoolean, P.Public, P.Undefined)
+        replacementVisible = M.singleton c (P.tyBoolean, P.Public, P.Defined)
+        changed = M.singleton b (P.tyInt, P.Private, P.Defined)
+        action = do
+          inside <- P.preservingNames $ do
+            P.putEnv $ P.initEnvironment { P.names = replacement, P.types = M.empty }
+            P.makeBindingGroupVisible
+            afterPut <- snapshot
+            P.modifyEnv $ \env -> env { P.names = M.singleton b (P.tyInt, P.Private, P.Undefined) }
+            P.makeBindingGroupVisible
+            afterModify <- snapshot
+            pure [afterPut, afterModify]
+          restored <- snapshot
+          noTypes <- gets (M.null . P.types . P.checkEnv)
+          P.makeBindingGroupVisible
+          after <- snapshot
+          pure (inside ++ [restored, after], noTypes)
+    run action `shouldBe` Right ([replacementVisible, changed, initial, visible], True)
+
+  it "rejects cycles again after leaving a function-visible scope" $ \_ -> do
+    run (P.checkVisibility a) `shouldBe` Left ["CycleInDeclaration"]
+    run (P.checkVisibility b) `shouldBe` Right ()
+    run (P.withBindingGroupVisible (P.checkVisibility a)) `shouldBe` Right ()
+    run (P.withBindingGroupVisible (P.checkVisibility a) >> P.checkVisibility a)
+      `shouldBe` Left ["CycleInDeclaration"]
+    run (P.checkVisibility c) `shouldBe` Left ["NameIsUndefined"]
+  where
+  -- The same identifier under different qualifications must not be conflated.
+  a = P.Qualified (P.ByModuleName (P.ModuleName "Outer")) (P.Ident "value")
+  b = P.Qualified (P.ByModuleName (P.ModuleName "Imported")) (P.Ident "value")
+  c = P.Qualified (P.BySourcePos (P.SourcePos 4 2)) (P.Ident "local")
+  initial = M.fromList
+    [ (a, (P.tyInt, P.Private, P.Undefined))
+    , (b, (P.tyString, P.External, P.Defined))
+    ]
+  visible = M.fromList
+    [ (a, (P.tyInt, P.Private, P.Defined))
+    , (b, (P.tyString, P.External, P.Defined))
+    ]
+  snapshot = gets (P.names . P.checkEnv)
+  run :: StateT P.CheckState (Either P.MultipleErrors) a -> Either [T.Text] a
+  run action = first (map P.errorCode . P.runMultipleErrors) $
+    evalStateT action (P.emptyCheckState (P.initEnvironment { P.names = initial }))
 
 passingTests :: SpecWith SupportModules
 passingTests = do

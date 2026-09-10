@@ -250,7 +250,12 @@ bindLocalTypeVariables moduleName bindings =
 
 -- | Update the visibility of all names to Defined
 makeBindingGroupVisible :: (MonadState CheckState m) => m ()
-makeBindingGroupVisible = modifyEnv $ \e -> e { names = M.map (\(ty, nk, _) -> (ty, nk, Defined)) (names e) }
+makeBindingGroupVisible = modifyEnv $ \e -> e { names = M.mapMaybe define (names e) `M.union` names e }
+  where
+  -- Promote a batch instead of rebuilding a search path per undefined name in
+  -- dense binding groups. Already-defined names are shared from the original.
+  define (ty, nk, Undefined) = Just (ty, nk, Defined)
+  define (_, _, Defined) = Nothing
 
 -- | Update the visibility of all names to Defined in the scope of the provided action
 withBindingGroupVisible :: (MonadState CheckState m) => m a -> m a
