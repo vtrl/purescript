@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--samples', type=int, default=5)
     parser.add_argument('--cache', choices=['warm', 'cold'], default='warm')
     parser.add_argument('--codegen', default='js')
+    parser.add_argument('--rts-arg', action='append', default=[], help='Extra RTS flag, e.g. --rts-arg=-A16m')
     args = parser.parse_args()
     if args.samples < 1 or args.capabilities < 1:
         parser.error('samples and capabilities must be positive')
@@ -48,7 +49,7 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         output = corpus / 'benchmark-output'
         command = [str(compiler), 'compile', *sources, '--output', str(output),
-                   '--codegen', args.codegen, '+RTS', f'-N{args.capabilities}', '-s', '-RTS']
+                   '--codegen', args.codegen, '+RTS', f'-N{args.capabilities}', *args.rts_arg, '-s', '-RTS']
         env = dict(os.environ, LC_ALL='C', LANG='C', GHCRTS='')
         metadata = {
             'label': args.label, 'compiler': str(compiler), 'compiler_sha256': sha256(compiler),
