@@ -62,6 +62,13 @@ identical capabilities/cache/codegen flags; alternate repeated blocks to
 check drift. Worker-machine timings are only provisional until reproduced
 by the lead.
 
+For counterbalanced comparisons, add `--baseline /path/to/purs-baseline`
+and supply the candidate with `--compiler`. `--samples 5` then measures five
+pairs in B/C, C/B, B/C, C/B, B/C order, after one excluded clean warm-up of
+each binary. Each compiler receives a separate summary; paired percentage
+changes use the baseline in the same pair, not an earlier campaign mean.
+All repetitions of both binaries must produce identical product hashes.
+
 ## Machine and ownership
 
 Lead orb: 8 vCPUs (4 cores × 2 SMT), Intel Xeon @ 2.60 GHz, family 6/model

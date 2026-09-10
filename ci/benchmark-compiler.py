@@ -18,10 +18,21 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def summarize(rows):
+    summary = {}
+    for field in ['wall_s', 'peak_rss_kib', 'allocated_bytes', 'max_residency_bytes']:
+        values = [row[field] for row in rows]
+        summary[field] = {'mean': statistics.mean(values), 'median': statistics.median(values),
+                          'stdev': statistics.stdev(values) if len(values) > 1 else None,
+                          'min': min(values), 'max': max(values)}
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--corpus', type=Path, required=True)
     parser.add_argument('--compiler', type=Path, required=True)
+    parser.add_argument('--baseline', type=Path, help='Alternate baseline/candidate pairs, reversing order each pair')
     parser.add_argument('--results', type=Path, required=True, help='New directory; never overwrites results')
     parser.add_argument('--label', required=True, help='Compiler commit and build identity')
     parser.add_argument('--capabilities', type=int, default=1)
@@ -34,6 +45,7 @@ def main():
         parser.error('samples and capabilities must be positive')
     corpus = args.corpus.resolve()
     compiler = args.compiler.resolve(strict=True)
+    baseline = args.baseline.resolve(strict=True) if args.baseline else None
     results = args.results.resolve()
     results.mkdir(parents=True, exist_ok=False)
     sources = json.loads((corpus / 'purs-files.json').read_text())
@@ -62,21 +74,32 @@ def main():
             'cpu_info': Path('/proc/cpuinfo').read_text(), 'memory_info': Path('/proc/meminfo').read_text(),
             'timestamp_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
         }
+        if baseline:
+            metadata['baseline'] = {
+                'compiler': str(baseline), 'compiler_sha256': sha256(baseline),
+                'version': subprocess.check_output([str(baseline), '--version'], env=env, text=True).strip(),
+            }
+            metadata['order'] = 'baseline/candidate on odd pairs; candidate/baseline on even pairs'
         (results / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
         rows = []
         first_products = None
         # Warm-up is a full clean compile and is explicitly excluded from samples.
-        runs = ['warmup', *map(str, range(1, args.samples + 1))] if args.cache == 'warm' else list(map(str, range(1, args.samples + 1)))
-        for run in runs:
+        variants = [('baseline', baseline), ('candidate', compiler)] if baseline else [(None, compiler)]
+        runs = [(f'warmup-{name}' if name else 'warmup', name, binary) for name, binary in variants] if args.cache == 'warm' else []
+        for sample in range(1, args.samples + 1):
+            order = variants if sample % 2 else list(reversed(variants))
+            runs.extend((f'{name}-{sample}' if name else str(sample), name, binary) for name, binary in order)
+        for run, variant, binary in runs:
             shutil.rmtree(output, ignore_errors=True)
             if args.cache == 'cold':
                 # Only use in an otherwise idle, disposable benchmark machine.
                 # Fail rather than silently labelling a warm run as cold.
                 subprocess.run(['sudo', '-n', 'sh', '-c', 'sync; echo 3 > /proc/sys/vm/drop_caches'], check=True)
             stats = results / f'{run}.time'
+            run_command = [str(binary), *command[1:]]
             with (results / f'{run}.stdout').open('w') as stdout, (results / f'{run}.stderr').open('w') as stderr:
                 started = time.perf_counter()
-                subprocess.run(['/usr/bin/time', '-f', '%e %U %S %M', '-o', str(stats), *command],
+                subprocess.run(['/usr/bin/time', '-f', '%e %U %S %M', '-o', str(stats), *run_command],
                                cwd=corpus, env=env, stdout=stdout, stderr=stderr, check=True)
                 elapsed = time.perf_counter() - started
             wall, user, system, rss = map(float, stats.read_text().split())
@@ -98,16 +121,21 @@ def main():
             row = {'run': run, 'wall_s': wall, 'monotonic_s': elapsed, 'user_s': user, 'system_s': system,
                    'peak_rss_kib': int(rss), 'allocated_bytes': int(allocations[1].replace(',', '')),
                    'max_residency_bytes': int(residency[1].replace(',', ''))}
+            if variant:
+                row['compiler'] = variant
             print(json.dumps(row), flush=True)
-            if run != 'warmup':
+            if not run.startswith('warmup'):
                 rows.append(row)
             (results / 'samples.json').write_text(json.dumps(rows, indent=2) + '\n')
-        summary = {}
-        for field in ['wall_s', 'peak_rss_kib', 'allocated_bytes', 'max_residency_bytes']:
-            values = [row[field] for row in rows]
-            summary[field] = {'mean': statistics.mean(values), 'median': statistics.median(values),
-                              'stdev': statistics.stdev(values) if len(values) > 1 else None,
-                              'min': min(values), 'max': max(values)}
+        if baseline:
+            groups = {name: [row for row in rows if row['compiler'] == name] for name, _ in variants}
+            summary = {name: summarize(group) for name, group in groups.items()}
+            changes = [{field: 100 * (candidate[field] / base[field] - 1) for field in summary['baseline']}
+                       for base, candidate in zip(groups['baseline'], groups['candidate'])]
+            summary['paired_change_percent'] = summarize(changes)
+            (results / 'paired-changes.json').write_text(json.dumps(changes, indent=2) + '\n')
+        else:
+            summary = summarize(rows)
         (results / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
         print(json.dumps(summary, indent=2))
 
