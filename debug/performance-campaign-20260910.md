@@ -5,6 +5,13 @@ Original compiler baseline: `9160ce1518b5f11f9ebe32b445019f8dbb4f435a`, verified
 against the fork's `master` and default branch on 2026-09-10. Do not push to
 upstream or merge this campaign to master without separate authorization.
 
+The only accepted compiler optimization is [Make lifetime release
+38080a40](https://github.com/vtrl/purescript/commit/38080a40fc3a53de813a0ac46187e8c709dcbcc7).
+Later campaign commits preserve evidence, not the rejected binding-visibility,
+CST packing, or inliner source changes. `varIfUnknown` remains an allocation-only
+candidate pending independent N1 and integration checks. External-fork trials
+are described in [the provenance report](performance-fork-provenance-20260910.md).
+
 ## Reproduction
 
 The corpus adapts `ci/build-package-set.sh`: use CI's Spago 0.93.43 to fetch
@@ -79,19 +86,22 @@ Linux 6.1.158+, x86-64, KVM. No explicit CPU quota. Record machine metadata
 with each run rather than assuming every large orb is identical.
 
 Concurrency ceiling: eight Ultra orbs including the lead; workers are
-`a1.large` or larger. Five orbs currently:
+`a1.large` or larger. Five orbs at the external-fork checkpoint:
 
-- Lead owns the benchmark harness, non-profiled baseline, integration, and
-  combined correctness; `Make.hs` parsing/AST lifetime trial.
-- GHC profiling worker now owns `perf/inliner-arity-20260910`:
-  `CoreImp/Optimizer/Inliner.hs` and direct AST tests in `TestAst.hs`.
-- Baseline correctness/native CPU worker now owns `perf/cst-unpack-20260910`:
-  representation of already-strict products in `CST/Types.hs`; diagnostic
-  heap profiling of the supplied Make candidate while packing repeats wait.
-- Nursery worker completed the negative RTS trial and now independently
-  measures supplied Make baseline/candidate binaries at N1.
-- `perf/binding-visibility-20260910`: sparse name-visibility promotion in
-  `TypeChecker/Monad.hs` and focused state tests in `TestCompiler.hs`.
+- Lead owns the benchmark harness, integration, combined correctness, and
+  further `Make.hs` parser-warning lifetime investigation.
+- Former CST/native-profile worker owns the isolated two-pragma AST traversal
+  specialization trial, `perf/traversal-inlinable-20260910`.
+- Former nursery/N1 worker owns the isolated global specialization-flag trial,
+  `perf/specialization-flags-20260910`.
+- Former binding-visibility worker independently verifies the supplied
+  `varIfUnknown` binaries, first dense N1, then a full-corpus N1 screen.
+- Former `varIfUnknown` worker owns the separate equal-leaf unification trial,
+  `perf/unify-leaf-fastpaths-20260910`, without its prior source change.
+
+The inliner worker completed its negative report and archived itself. No new
+orb was created for external-fork research. These are disjoint trial branches;
+worker source and tests are not implicitly accepted into the campaign.
 
 Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
 is the first accepted compiler checkpoint. Other source trials started from
@@ -251,25 +261,71 @@ CST 198.59→51.20 MiB. CST retention is reduced, not eliminated. These
 instrumented profiles are not timing comparisons; remaining retaining roots
 are unidentified. See `make-heap-summary.md` and its raw evidence bundle.
 
-N1 repeated validation is still running on a separate machine. Its first two
-complete pairs are 250.22/243.18 and 251.19/239.26 s; the first pair lowers
-RSS 42.85%. This is supporting direction, not a completed five-pair claim.
-Full N8 and tiny boundary checks are also pending; cold and incremental
-candidate timings have not yet been measured.
+Independent N1 and N8 verification is complete, using the same preserved
+binary hashes and paired harness. These are within-machine paired comparisons,
+not comparisons of timing means between orbs. All 12 N1 and eight N8 compiles,
+including excluded warmups, match the original 8,985 products and complete
+745-warning content multisets.
+
+| RTS | Pairs | Baseline wall mean ± SD (s) | Make wall mean ± SD (s) | Paired wall change ± SD (pp) | Paired RSS change ± SD (pp) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| N1 | 5 | 249.978 ± 1.050 | 242.726 ± 5.530 | −2.893% ± 2.594 | −45.495% ± 1.562 |
+| N8 | 3 | 78.690 ± 0.375 | 73.813 ± 1.227 | −6.199% ± 1.352 | −40.513% ± 2.276 |
+
+SD is sample standard deviation, not a confidence interval. N1 wall pairs are
+250.22/243.18, 251.19/239.26, 250.04/239.17, 250.15/239.85,
+248.29/252.17 s. The final candidate is slower; it was retained, not rerun or
+discarded. Its cause is unestablished. N1 supports consistent peak-memory
+reduction, not a uniform-speedup claim. N8 wall pairs are 78.26/72.87,
+78.95/73.37, 78.86/75.20 s; all three lower wall/RSS/residency. Allocation
+slightly increases at both settings (+0.02885% N1, +0.02499% N8).
+
+Tiny Sequence verification also completed: 57 modules/78 inputs, ten pairs
+each at N1/N4/N8, plus excluded warmups. All 66 compiles match 135 original
+products and three warning contents. RSS is lower in every pair, with mean
+paired reductions 15.501%, 15.906%, and 9.621%. Mean paired wall changes are
+−0.047% ± 10.462 pp, −6.448% ± 5.539 pp, and −6.940% ± 8.669 pp respectively.
+Short-run variance is large; N1 has no established timing change. No outliers
+were dropped. Cold and incremental candidate timings remain unmeasured.
+
+Review artifacts contain `make-n1-paired.tar.gz`, `make-n8-evidence.tar.gz`,
+`make-n8-summary.md`, `make-tiny-evidence.tar.gz`, and `make-tiny-summary.md`.
 
 ### Other source trials
 
-CST packing screens measured RSS reductions of 11.83% at N4 and 16.11% at
-N1, but wall differences of −0.20% and +1.85% respectively are not evidence
-of a speedup at one sample each. Its full 1,301-test suite and all products
-pass. The source checkpoint is `perf/cst-unpack-20260910`; additive benefit
-must be measured after the Make lifetime decision, not inferred by adding
-the two standalone memory reductions.
+CST packing is rejected after additive measurement. Standalone screens lowered
+RSS 11.83% at N4 and 16.11% at N1, but the accepted Make change removes most
+of that opportunity. Make versus Make + four UNPACK pragmas at N4 screened
+113.90→115.54 s (+1.440%), RSS −2.944%, allocation −0.0731%. The full additive
+suite passes 1,302 examples and all products/warning contents match. This small
+memory signal did not justify repeats; one pair does not establish slowdown.
+Only [the negative report](performance-cst-unpack-additive-20260910.md) is retained.
 
-Sparse binding visibility reduced allocation by 7.705 GB (1.94%) in its
-N4 screen, with variable timings; N1 screened 253.39→239.67 s and 1.942%
-less allocation. Its full suite passes 1,306 examples; repetitions are
-underway. It is not yet integrated.
+Both binding-visibility variants are rejected despite package-set gains. The
+original sparse fold's five N4 pairs reduced standalone allocation 1.943%;
+lead additive N4 five-pair wall was −5.727% ± 1.780 pp, allocation −1.940%,
+with 1,307 full tests passing. But a valid compile-only cycle of 1,000 typed
+functions exposed a dense-group regression: five N1 pairs gave wall +51.058%,
+RSS +43.413%, allocation +35.269%. This counterexample invalidates acceptance.
+
+The bounded replacement built a promoted map with `M.mapMaybe` and left-biased
+`M.union`, removing most repeated-insertion allocation overhead. It still
+failed the same five-pair dense gate: wall +20.126% ± 17.182 pp (all five
+slower), RSS +61.449% ± 0.103 pp, allocation +2.067%, residency +55.406%.
+Full 1,307/0 correctness and identical local products do not offset that
+regression. No package-set repetition or threshold/cache workaround followed.
+See [the batched rejection report](binding-visibility-batched-trial-20260910.md).
+The separate original→Make+sparse N8 result (−8.590% wall, −40.838% RSS)
+remains preserved in `make-binding-n8-evidence.tar.gz`, not an accepted result.
+
+Read-only unknown generalization (`varIfUnknown`) remains pending. Four N4
+confirmation pairs save 2.063 GB allocation (−0.51894% ± 0.00347 pp), but
+wall −0.406% ± 2.695 pp and RSS −1.718% ± 3.014 pp establish neither a speed
+nor peak-memory win. Full 1,305/0 and all 14 clean-run product/warning checks
+pass. An independent dense-1000 N1 five-pair gate found allocation −0.41874%,
+RSS +0.039% ± 0.063 pp, and no established timing change. Full-corpus N1 and
+lead integration checks remain pending; source is not accepted. Retain
+[the provisional report](varifunknown-trial-20260910.md) separately from source.
 
 Both inliner changes are rejected. The positive-arity guard alone changed
 N4 wall by −0.08% and allocation by −0.02%. Deferred argument-list creation
