@@ -225,18 +225,13 @@ inlineCommonOperators expander = everywhereTopDown $ applyAll $
   runFn' :: (ModuleName, PSString) -> (Maybe SourceSpan -> AST -> [AST] -> AST) -> Int -> AST -> AST
   runFn' runFn_ res n = convert where
     convert :: AST -> AST
-    convert js = fromMaybe js $ do
-      (ss, fn, args) <- go n js
-      pure $ res ss fn (reverse args)
+    convert js = fromMaybe js $ go n [] js
 
-    -- Most applications do not match. Allocate arguments only after finding
-    -- the expected function at exactly the requested arity.
-    go :: Int -> AST -> Maybe (Maybe SourceSpan, AST, [AST])
-    go 0 (App ss (Ref runFnN) [fn]) | isNFn runFn_ n runFnN = Just (ss, fn, [])
-    go m (App _ lhs [arg]) | m > 0 = do
-      (ss, fn, args) <- go (m - 1) lhs
-      pure (ss, fn, arg : args)
-    go _ _ = Nothing
+    go :: Int -> [AST] -> AST -> Maybe AST
+    go 0 acc (App ss (Ref runFnN) [fn]) | isNFn runFn_ n runFnN && length acc == n =
+      Just $ res ss fn acc
+    go m acc (App _ lhs [arg]) = go (m - 1) (arg : acc) lhs
+    go _ _   _ = Nothing
 
   inlineNonClassFunction :: (AST -> Bool) -> (AST -> AST -> AST) -> AST -> AST
   inlineNonClassFunction p f = convert where
