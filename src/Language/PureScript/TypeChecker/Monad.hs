@@ -250,7 +250,12 @@ bindLocalTypeVariables moduleName bindings =
 
 -- | Update the visibility of all names to Defined
 makeBindingGroupVisible :: (MonadState CheckState m) => m ()
-makeBindingGroupVisible = modifyEnv $ \e -> e { names = M.map (\(ty, nk, _) -> (ty, nk, Defined)) (names e) }
+makeBindingGroupVisible = modifyEnv $ \e -> e { names = M.foldlWithKey' define (names e) (names e) }
+  where
+  -- Most names are imported and already Defined. Preserve those entries rather
+  -- than rebuilding the entire environment for each function binder.
+  define ns name (ty, nk, Undefined) = M.insert name (ty, nk, Defined) ns
+  define ns _ (_, _, Defined) = ns
 
 -- | Update the visibility of all names to Defined in the scope of the provided action
 withBindingGroupVisible :: (MonadState CheckState m) => m a -> m a
