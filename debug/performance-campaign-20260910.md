@@ -8,8 +8,10 @@ upstream or merge this campaign to master without separate authorization.
 The only accepted compiler optimization is [Make lifetime release
 38080a40](https://github.com/vtrl/purescript/commit/38080a40fc3a53de813a0ac46187e8c709dcbcc7).
 Later campaign commits preserve evidence, not the rejected binding-visibility,
-CST packing, or inliner source changes. `varIfUnknown` remains an allocation-only
-candidate pending independent N1 and integration checks. External-fork trials
+CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
+forcing and specialization flags remain unaccepted pending their confirmation
+blocks. `varIfUnknown` and equal-leaf guards remain allocation-only candidates
+under the user's newly authorized final validation. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
 
 ## Reproduction
@@ -85,23 +87,38 @@ Lead orb: 8 vCPUs (4 cores × 2 SMT), Intel Xeon @ 2.60 GHz, family 6/model
 Linux 6.1.158+, x86-64, KVM. No explicit CPU quota. Record machine metadata
 with each run rather than assuming every large orb is identical.
 
-Concurrency ceiling: eight Ultra orbs including the lead; workers are
-`a1.large` or larger. Five orbs at the external-fork checkpoint:
+The user raised the concurrency ceiling to **16 total orbs including the
+lead**, then specified **xxlarge only**. New workers use `a1.xxlarge`, not
+`a1.3xlarge`. Existing smaller-orb runs remain uninterrupted. At this checkpoint
+11 unarchived campaign orbs are allocated: the lead, four original workers,
+and six new validation workers; some completed original workers are idle.
 
-- Lead owns the benchmark harness, integration, combined correctness, and
-  further `Make.hs` parser-warning lifetime investigation.
-- Former CST/native-profile worker owns the isolated two-pragma AST traversal
-  specialization trial, `perf/traversal-inlinable-20260910`.
-- Former nursery/N1 worker owns the isolated global specialization-flag trial,
-  `perf/specialization-flags-20260910`.
-- Former binding-visibility worker independently verifies the supplied
-  `varIfUnknown` binaries, first dense N1, then a full-corpus N1 screen.
-- Former `varIfUnknown` worker owns the separate equal-leaf unification trial,
-  `perf/unify-leaf-fastpaths-20260910`, without its prior source change.
+- Lead owns the harness, accepted branch, evidence imports, and eventual
+  synchronized cumulative candidate and benchmark replication.
+- Original specialization worker owns the isolated flags source/build/full
+  tests and fresh five-pair N4 confirmation on its existing machine.
+- Original boundary, N1, and heap workers completed separate warning-force
+  N8/tiny, N1/dense, and diagnostic heap assignments; their evidence is retained.
+- New binary-only workers own disjoint leaf N4-five/dense-ten, varIfUnknown
+  N1-five, warning-force N4-five, specialization N1-three, and specialization
+  N8-three/dense-ten/tiny-ten-per-capability blocks.
+- A sixth new worker independently audits warning-force source, full tests,
+  targeted warning behavior, and the saved screen/N8 records without timing.
 
-The inliner worker completed its negative report and archived itself. No new
-orb was created for external-fork research. These are disjoint trial branches;
+New machines expose 16 logical Xeon CPUs and a 30 GiB workload limit. Fixed
+N1/N4/N8 settings, exact baseline/candidate binary hashes, original corpus,
+excluded warmups, and within-machine counterbalancing remain unchanged.
+Do not pool measurements across different machines or treat capacity as
+authorization for redundant variants. These are disjoint trial/report branches;
 worker source and tests are not implicitly accepted into the campaign.
+
+The lead's initial warning-force five-pair N4 block was interrupted after
+three complete pairs; its partial fourth run and unavailable exit status are
+preserved, not relabeled as a completed confirmation. A fresh xxlarge block
+replaces it as a separate experiment. Long blocks use managed services with
+an atomic run-once guard, recorded exit status, and an idle hold after completion
+until collection and service stop. This prevents automatic restarts from
+silently adding samples. Cumulative replication waits for candidate selection.
 
 Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
 is the first accepted compiler checkpoint. Other source trials started from
@@ -323,9 +340,13 @@ confirmation pairs save 2.063 GB allocation (−0.51894% ± 0.00347 pp), but
 wall −0.406% ± 2.695 pp and RSS −1.718% ± 3.014 pp establish neither a speed
 nor peak-memory win. Full 1,305/0 and all 14 clean-run product/warning checks
 pass. An independent dense-1000 N1 five-pair gate found allocation −0.41874%,
-RSS +0.039% ± 0.063 pp, and no established timing change. Full-corpus N1 and
-lead integration checks remain pending; source is not accepted. Retain
-[the provisional report](varifunknown-trial-20260910.md) separately from source.
+RSS +0.039% ± 0.063 pp, and no established timing change. Its subsequent full
+N1 screen saved 0.52147% allocation but increased wall 2.92244% and RSS
+2.08629%; all four package products/warning-content checks passed. This closed
+as HOLD/unaccepted, not proof of slowdown. The user subsequently authorized
+one final five-pair N1 block on xxlarge; no new source variant is included.
+Retain [the original report](varifunknown-trial-20260910.md) and
+[independent HOLD checkpoint](varifunknown-binary-verification-20260910.md).
 
 Both inliner changes are rejected. The positive-arity guard alone changed
 N4 wall by −0.08% and allocation by −0.02%. Deferred argument-list creation
@@ -334,3 +355,57 @@ These are single-pair screens; neither justifies expensive repetitions.
 Its 1,438-test suite and all products pass, but diagnostic auto-SCC allocation
 attribution did not translate into material normal-O2 savings. Trial source
 and tests remain on the worker branch; only negative evidence is for integration.
+
+### Warning-force memory evidence is positive; confirmation remains pending
+
+Forcing converted parser warnings before logging screened at N4 with RSS
+−19.299%, residency −17.921%, and wall −0.741%; allocation was unchanged.
+The interrupted confirmation contains only three complete pairs and cannot
+satisfy its prespecified five-pair block. A fresh fixed-N4 five-pair block is
+running on xxlarge, with new excluded warmups and no historical pooling.
+
+Independent N1 one-pair RSS was −32.362%, residency −27.138%, wall −1.398%.
+N8 three-pair RSS was −25.024% ± 1.159 pp and wall −2.625% ± 1.025 pp.
+Dense five-pair N1 showed no material regression (+432 allocated bytes).
+Tiny ten-pair N1/N4/N8 wall results were mixed; N1 mean +33 ms remains a
+qualification, not proof of latency equivalence or universal speedup.
+
+The supplied source passed the lead's 1,303/0 suite. An independent exact-source
+optimized build also passed 1,303/0, separate Make 14/0, and focused warning/error
+checks 5/0. Independent raw audits preserve all samples and verify the package
+warning multiset. Those 745 warnings contain no `WarningParsingModule` codes:
+nonempty parser warnings are covered by targeted tests, not this corpus.
+Per-run product checks are supported by harness execution and saved maps;
+archives do not contain every separate generated tree.
+
+One type-heap diagnostic reduced total sampled peak 589.75→407.72 MiB and
+near-end CST 51.20→0.36 MiB relative to saved Make evidence. Final-tenth CST
+mean was 53.39→3.49 MiB, retaining excursions. This supports lifetime reduction,
+not exact retaining roots or timing. See [the detailed trial report](parser-warning-force-trial-20260910.md)
+and [independent N1 report](parse-warnings-force-binary-verification-20260910.md).
+
+### External-fork trials remain isolated
+
+Standalone traversal INLINABLE is rejected: one N4 pair had wall +3.737%,
+RSS −1.096%, and unchanged allocation; excluded warmup was also slower.
+Full 1,302/0 and product/warning equality passed. No repetitions or combination
+with global flags followed. This does not refute the author's private-workload
+result. See [the rejection report](performance-traversal-inlinable-20260910.md).
+
+Equal-leaf guards initially closed without integration: N4 screen allocation
+−1.651%, wall +2.672%; dense N1 five pairs allocation −1.672%, wall
++5.269% ± 16.162 pp, RSS +0.824%. Full 1,307/0 and output checks passed.
+The [historical closure report](unify-leaf-fastpaths-trial-20260910.md) remains
+unchanged. The user's later expansion explicitly reopened bounded final N4
+and dense validation on xxlarge; it did not accept the source or establish
+a slowdown. New measurements remain separate from the earlier noisy block.
+
+The two global GHC flags produced a large allocation screen: −43.617% at N4,
+wall 138.37→93.17 s, RSS +3.070%, residency +9.288%. Both measured runs were
+slower than their excluded warmups, so −32.666% is not a precise speedup
+estimate. Full 1,302/0 passed; stripped binary size rose 47.322%, and clean
+compiler build took 768.70 s with 4,152,924 KiB maximum RSS. Five-pair N4 and
+independent N1/N8/boundary verification are underway. See [the isolated flags
+screen and build-cost report](performance-specialization-flags-20260910.md).
+No standalone percentages are added together, and no combined candidate has
+yet been built or accepted.

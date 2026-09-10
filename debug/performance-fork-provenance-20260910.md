@@ -49,6 +49,15 @@ Assigned trial: `perf/traversal-inlinable-20260910`, owns only the two pragmas
 and an evidence report. Do not combine with global flags until isolated
 measurements establish whether both merit an interaction test.
 
+Local checkpoint: rejected standalone after the N4 screen (wall +3.7367%,
+RSS −1.0958%, allocation effectively unchanged; excluded warmup also slower).
+Full 1,302/0 and product/warning checks passed. No repeats or combination with
+flags followed. Attributed source [e10a641c](https://github.com/vtrl/purescript/commit/e10a641ca84335409faa1f4e2d28f3f9a2330a54)
+preserves Michal Kozakiewicz's author/date and the original Claude trailer;
+only [the rejection report](performance-traversal-inlinable-20260910.md) is
+imported into the accepted campaign. This is not a refutation of the foreign
+private-workload result.
+
 ## Global specialization flags: Oxford imported an upstream change
 
 - Original source: [upstream PR4584](https://github.com/purescript/purescript/pull/4584),
@@ -83,6 +92,15 @@ than universally changing downstream library builds.
 Assigned trial: `perf/specialization-flags-20260910`, owns only the two config
 files and report. Trial both exact flags together, not an unbounded flag matrix.
 Record compiler build time/peak RSS and tested binary size as well as runtime.
+
+Local checkpoint: [c7df45fb](https://github.com/vtrl/purescript/commit/c7df45fbb92b824ca7ae3e89b6e8f0d25bcb3c63)
+retains seastian's authorship and upstream provenance. Full 1,302/0 passed.
+The final tested binary, not the initial compiler-only build, screened with
+allocation −43.617%, wall 138.37→93.17 s, RSS +3.070%, residency +9.288%.
+There is visible warmup-to-measurement drift and only one pair. Binary size
+increased 47.322%; compiler build took 768.70 s with 4,152,924 KiB peak RSS.
+Five-pair N4 and independent N1/N8/boundary checks are underway; source is
+unaccepted. See [the flags screen report](performance-specialization-flags-20260910.md).
 
 ## Equal-leaf unification: adapt guards, not the foreign cache history
 
@@ -130,6 +148,15 @@ implicitly imported. Pattern-survey instrumentation is diagnostic only.
 Assigned trial: `perf/unify-leaf-fastpaths-20260910`, owns `Unify.hs`, direct
 `TestAst.hs` cases, and report. No prior `varIfUnknown` source change included.
 
+Local checkpoint: [09c49076](https://github.com/vtrl/purescript/commit/09c49076095dd8797984812b6e612d00a271aee1)
+preserves Michal Kozakiewicz's author/date; direct tests are separate. Full
+1,307/0 and product/warning checks passed. N4 screen allocation −1.651% with
+wall +2.672%, followed by noisy dense timing, led to a preserved no-integration
+[closure report](unify-leaf-fastpaths-trial-20260910.md). The user's subsequent
+campaign expansion reopened only bounded exact-binary N4/dense validation on
+xxlarge, not a new variant or source acceptance. Historical data is not pooled
+with the new machine's measurements.
+
 ## Other leads stay deferred rather than expanding the trial matrix
 
 The initial branch survey also identified lazy substitution, row-prefix
@@ -156,5 +183,9 @@ Report the screen before expensive repetitions. Positive candidates need
 repeated within-machine paired measurements, relevant N1/N8/boundary checks,
 and lead additive correctness/measurement before acceptance. Measure any
 specialization interaction rather than adding standalone percentages. Preserve
-negative trials and outliers. Five current orbs, no new workers, below the
-eight-Ultra-orb ceiling. No external-fork performance claim is accepted yet.
+negative trials and outliers. The user's latest ceiling is 16 total orbs and
+new workers are xxlarge only (`a1.xxlarge`); 11 are currently allocated including
+the lead, with disjoint assignments and some completed workers idle. The
+[campaign record](performance-campaign-20260910.md) identifies ownership,
+run-once service controls, and pending cumulative replication. No external-fork
+performance claim is accepted yet.
