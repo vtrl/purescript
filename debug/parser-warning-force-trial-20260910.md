@@ -183,9 +183,34 @@ qualification rather than asserting latency equivalence or universal speedup.
 Boundary archives are `parser-warning-force-n8.tar.gz` and
 `parser-warning-force-tiny.tar.gz` in the lead review artifacts directory.
 
-The candidate remains unaccepted pending the fresh N4 block. The independent
-correctness/evidence audit is complete and collected. No compiler changes were made during measurement,
+The candidate remains unaccepted into campaign source. The independent
+correctness/evidence audit and fresh N4 confirmation are complete and collected.
+No compiler changes were made during measurement,
 and no rejected visibility, unification, or specialization variant was mixed in.
+
+## Fresh five-pair N4 confirmation is complete
+
+The new xxlarge block finished once with exit 0 and no service restart.
+Five B/C wall pairs were 110.35/107.89, 113.14/109.20, 108.97/106.27,
+111.58/112.07, and 108.27/109.48 seconds, in BC/CB/BC/CB/BC execution order.
+Mean paired RSS change was −24.7545% ± 3.6198 pp sample SD and sampled
+residency −23.7237% ± 3.8995 pp; all five pairs improved both. Wall changed
+−1.3265% ± 1.9924 pp (three favorable, two slower), allocation +0.001672%
+± 0.004920 pp. Both new warmups and all earlier block samples are excluded.
+
+All 12 clean compiles passed original product/warning comparisons. The lead
+verified the archive's 77 payload hashes, both actual binaries, complete raw
+time/RTS/module records, exact warning multiplicities, saved original product
+map, and paired statistics. Final worker output/corpus bytes are not included
+and their rehash is attributed worker evidence. Full values and commands are
+in [the fresh N4 report](performance-parser-warning-n4-xxlarge-20260910.md).
+Lead archive `parser-warning-force-n4-xxlarge.tar.gz` has SHA256
+`9243d1e91606bc35e5dd2653bd679f607a59e6ad3c71846151d1543d903a1279`.
+
+This satisfies the isolated memory confirmation, not a consistent-speed claim.
+Warning-force is selected with the two specialization flags for an experimental
+cumulative build on a separate branch. Their interaction must be tested before
+integration; no additive percentage or offsetting memory effect is assumed.
 
 ## Audit scope and diagnostic heap evidence
 

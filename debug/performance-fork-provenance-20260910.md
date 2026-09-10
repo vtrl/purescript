@@ -99,8 +99,12 @@ The final tested binary, not the initial compiler-only build, screened with
 allocation −43.617%, wall 138.37→93.17 s, RSS +3.070%, residency +9.288%.
 There is visible warmup-to-measurement drift and only one pair. Binary size
 increased 47.322%; compiler build took 768.70 s with 4,152,924 KiB peak RSS.
-Five-pair N4 and independent N1/N8/boundary checks are underway; source is
-unaccepted. See [the flags screen report](performance-specialization-flags-20260910.md).
+Subsequent five-pair N4 wall improved 29.5860% ± 2.7337 pp sample SD, with
+RSS +4.1932% and allocation −43.6296%; N1/N8 three-pair blocks and all assigned
+small boundaries completed with faster wall times but higher mean RSS.
+Independent raw auditing continues. The flags are selected only for a separate
+warning-force cumulative build, not accepted into campaign source. See
+[the screen/confirmation report](performance-specialization-flags-20260910.md).
 
 ## Equal-leaf unification: adapt guards, not the foreign cache history
 
@@ -155,7 +159,10 @@ wall +2.672%, followed by noisy dense timing, led to a preserved no-integration
 [closure report](unify-leaf-fastpaths-trial-20260910.md). The user's subsequent
 campaign expansion reopened only bounded exact-binary N4/dense validation on
 xxlarge, not a new variant or source acceptance. Historical data is not pooled
-with the new machine's measurements.
+with the new machine's measurements. That validation completed: N4 allocation
+−1.65133% with noisy wall −2.2080% ± 3.1826 pp, dense allocation −1.67217%
+with RSS +0.8538%. Final decision remains HOLD; no full N1/N8 expansion or
+cumulative inclusion. See [the final validation report](performance-leaf-validation-xxlarge-20260910.md).
 
 ## Other leads stay deferred rather than expanding the trial matrix
 
@@ -184,8 +191,9 @@ repeated within-machine paired measurements, relevant N1/N8/boundary checks,
 and lead additive correctness/measurement before acceptance. Measure any
 specialization interaction rather than adding standalone percentages. Preserve
 negative trials and outliers. The user's latest ceiling is 16 total orbs and
-new workers are xxlarge only (`a1.xxlarge`); 11 are currently allocated including
+new workers are xxlarge only (`a1.xxlarge`); 12 are currently allocated including
 the lead, with disjoint assignments and some completed workers idle. The
 [campaign record](performance-campaign-20260910.md) identifies ownership,
-run-once service controls, and pending cumulative replication. No external-fork
-performance claim is accepted yet.
+run-once service controls, the exact experimental warning-force-plus-flags
+build, and pending cumulative replication. No external-fork source is accepted
+into the campaign yet.

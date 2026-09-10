@@ -9,9 +9,10 @@ The only accepted compiler optimization is [Make lifetime release
 38080a40](https://github.com/vtrl/purescript/commit/38080a40fc3a53de813a0ac46187e8c709dcbcc7).
 Later campaign commits preserve evidence, not the rejected binding-visibility,
 CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
-forcing and specialization flags remain unaccepted pending their confirmation
-blocks. `varIfUnknown` and equal-leaf guards remain allocation-only candidates
-under the user's newly authorized final validation. External-fork trials
+forcing and specialization flags passed their isolated confirmation blocks and
+are selected for an experimental cumulative build, not accepted source.
+Equal-leaf guards remain HOLD after final validation; `varIfUnknown` remains
+HOLD pending its final N1 block. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
 
 ## Reproduction
@@ -90,8 +91,9 @@ with each run rather than assuming every large orb is identical.
 The user raised the concurrency ceiling to **16 total orbs including the
 lead**, then specified **xxlarge only**. New workers use `a1.xxlarge`, not
 `a1.3xlarge`. Existing smaller-orb runs remain uninterrupted. At this checkpoint
-11 unarchived campaign orbs are allocated: the lead, four original workers,
-and six new validation workers; some completed original workers are idle.
+12 unarchived campaign orbs are allocated: the lead, four original workers,
+six validation workers, and one new cumulative build worker; completed workers
+remain idle unless assigned a separately owned next task.
 
 - Lead owns the harness, accepted branch, evidence imports, and eventual
   synchronized cumulative candidate and benchmark replication.
@@ -102,8 +104,12 @@ and six new validation workers; some completed original workers are idle.
 - New binary-only workers own disjoint leaf N4-five/dense-ten, varIfUnknown
   N1-five, warning-force N4-five, specialization N1-three, and specialization
   N8-three/dense-ten/tiny-ten-per-capability blocks.
-- A sixth new worker independently audits warning-force source, full tests,
-  targeted warning behavior, and the saved screen/N8 records without timing.
+- The independent correctness worker completed the warning-force audit and
+  now audits all isolated specialization raw evidence offline, without timing.
+- A new xxlarge worker owns only the experimental cumulative source union,
+  optimized build, full tests, and preservation of the final tested binary.
+  Its branch is `perf/cumulative-warning-specialization-20260910`; it does not
+  change the accepted branch or run benchmarks yet.
 
 New machines expose 16 logical Xeon CPUs and a 30 GiB workload limit. Fixed
 N1/N4/N8 settings, exact baseline/candidate binary hashes, original corpus,
@@ -118,7 +124,8 @@ preserved, not relabeled as a completed confirmation. A fresh xxlarge block
 replaces it as a separate experiment. Long blocks use managed services with
 an atomic run-once guard, recorded exit status, and an idle hold after completion
 until collection and service stop. This prevents automatic restarts from
-silently adding samples. Cumulative replication waits for candidate selection.
+silently adding samples. Cumulative timing waits for the tested exact binary
+and final standalone evidence review; no provisional matrix is running.
 
 Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
 is the first accepted compiler checkpoint. Other source trials started from
@@ -356,13 +363,24 @@ Its 1,438-test suite and all products pass, but diagnostic auto-SCC allocation
 attribution did not translate into material normal-O2 savings. Trial source
 and tests remain on the worker branch; only negative evidence is for integration.
 
-### Warning-force memory evidence is positive; confirmation remains pending
+### Warning-force confirmation supports memory reduction
 
 Forcing converted parser warnings before logging screened at N4 with RSS
 −19.299%, residency −17.921%, and wall −0.741%; allocation was unchanged.
 The interrupted confirmation contains only three complete pairs and cannot
-satisfy its prespecified five-pair block. A fresh fixed-N4 five-pair block is
-running on xxlarge, with new excluded warmups and no historical pooling.
+satisfy its prespecified five-pair block. The fresh fixed-N4 five-pair block
+completed on xxlarge with new excluded warmups and no historical pooling.
+Mean paired RSS fell 24.7545% ± 3.6198 pp sample SD and sampled residency
+23.7237% ± 3.8995 pp; all five pairs improved both memory metrics. Wall changed
+−1.3265% ± 1.9924 pp, with two pairs slower; allocation was effectively unchanged
+(+0.001672%). This is repeatable memory evidence, not consistent speedup.
+See [the fresh confirmation report](performance-parser-warning-n4-xxlarge-20260910.md).
+
+The lead verified the delivered archive and all 77 internal payload hashes,
+both actual executable hashes, all 12 raw time/RTS/module-progress records,
+original warning contents and saved product map, and all paired statistics.
+Worker final output/corpus trees are excluded from that archive; their post-run
+rehash remains worker evidence, not a claimed lead rehash of those trees.
 
 Independent N1 one-pair RSS was −32.362%, residency −27.138%, wall −1.398%.
 N8 three-pair RSS was −25.024% ± 1.159 pp and wall −2.625% ± 1.025 pp.
@@ -398,16 +416,62 @@ Equal-leaf guards initially closed without integration: N4 screen allocation
 −1.651%, wall +2.672%; dense N1 five pairs allocation −1.672%, wall
 +5.269% ± 16.162 pp, RSS +0.824%. Full 1,307/0 and output checks passed.
 The [historical closure report](unify-leaf-fastpaths-trial-20260910.md) remains
-unchanged. The user's later expansion explicitly reopened bounded final N4
-and dense validation on xxlarge; it did not accept the source or establish
-a slowdown. New measurements remain separate from the earlier noisy block.
+unchanged. The user's later expansion reopened bounded final N4 and dense
+validation on xxlarge. Both completed and remain **HOLD/unaccepted**: five-pair
+N4 wall −2.2080% ± 3.1826 pp, RSS +0.5060% ± 2.5341 pp, allocation −1.65133%;
+ten-pair dense N1 wall −3.1917% ± 7.7645 pp, RSS +0.8538%, allocation −1.67217%.
+The dense 1.20→0.90 s pair stays in the data. Allocation repeats; a stable
+speed or peak-memory win is not established. The lead verified all 165 archive
+checksums, reproduced both analyses, and independently checked raw time/RTS
+values and module progress for all 34 compiles. No full N1/N8 expansion follows.
+See [the final leaf validation report](performance-leaf-validation-xxlarge-20260910.md).
 
 The two global GHC flags produced a large allocation screen: −43.617% at N4,
 wall 138.37→93.17 s, RSS +3.070%, residency +9.288%. Both measured runs were
 slower than their excluded warmups, so −32.666% is not a precise speedup
 estimate. Full 1,302/0 passed; stripped binary size rose 47.322%, and clean
-compiler build took 768.70 s with 4,152,924 KiB maximum RSS. Five-pair N4 and
-independent N1/N8/boundary verification are underway. See [the isolated flags
-screen and build-cost report](performance-specialization-flags-20260910.md).
-No standalone percentages are added together, and no combined candidate has
-yet been built or accepted.
+compiler build took 768.70 s with 4,152,924 KiB maximum RSS. No matched baseline
+compiler-build timing exists, so relative build cost is unquantified.
+
+Completed standalone paired confirmation (SD is sample SD in percentage points):
+
+| Block | Pairs | Wall change ± SD | Allocation change | Peak RSS change ± SD |
+| --- | ---: | ---: | ---: | ---: |
+| N4 | 5 | −29.5860% ± 2.7337 | −43.6296% | +4.1932% ± 4.2761 |
+| N1 | 3 | −32.2495% ± 2.9184 | −43.6406% | +3.4177% ± 4.5339 |
+| N8 | 3 | −29.7273% ± 1.1681 | −43.6308% | +10.8607% ± 4.3265 |
+
+All wall pairs improved, but N4 baseline drift remains explicit. The N1 slower
+final candidate and large first-pair memory effect remain included. The lead
+reproduced N1/N4 analyses from saved raw records; the complete N1 archive also
+allows independent rehashing of both binaries, all inputs, and its final products.
+No cross-orb raw means are pooled. See [N4/build costs](performance-specialization-flags-20260910.md)
+and [N1 verification](performance-specialization-n1-xxlarge-20260910.md).
+
+The boundary worker completed 96 compiles: N8 above, dense N1 ten pairs, and
+tiny N1/N4/N8 ten pairs each. Reported dense wall −20.6054%, allocation −43.7412%,
+RSS +15.8146%; tiny wall −39.7901%/−43.5006%/−42.0528%, allocation about −49.6%,
+RSS +8.5749%/+9.2463%/+6.1295%. All required product/diagnostic checks passed.
+Their archive hashes are verified by the lead; the separate independent raw
+audit is in progress. The worker recorded a 30→29.5 GiB workload memory-limit
+change between snapshots with unknown transition time; preserve that limitation.
+Startup and cold paging are not isolated. See [the boundary report](specialization-boundaries-xxlarge-20260910.md).
+
+### The cumulative experiment is exactly warning-force plus both flags
+
+The selected experimental union is parser-warning source/test
+[2d5cc3bb](https://github.com/vtrl/purescript/commit/2d5cc3bb3b766551e0b6c341dc84fc760915298f)
+and attributed flags config
+[c7df45fb](https://github.com/vtrl/purescript/commit/c7df45fbb92b824ca7ae3e89b6e8f0d25bcb3c63),
+on Make-equivalent report checkpoint
+[c44600e8](https://github.com/vtrl/purescript/commit/c44600e8f7a390ad73a46f8932e8f90a21b40a8a).
+Its separately owned xxlarge worker prepares only the exact two-patch union,
+normal optimized build and full tests, preserving the final tested executable.
+Leaf, varIfUnknown, and all rejected variants are excluded. This is a reversible
+experimental branch, not acceptance into the campaign.
+
+No standalone percentage is added or assumed to offset another: warning-force
+memory savings may interact with the flags' increased residency. Final paired
+N1/N4/N8 and relevant dense/tiny measurements must use the same tested cumulative
+binary, exact preserved Make baseline, fresh clean-output blocks, and independent
+audit before any integration claim. No cumulative compiler timing has run yet.
