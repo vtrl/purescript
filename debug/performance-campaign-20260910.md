@@ -11,8 +11,8 @@ Later campaign commits preserve evidence, not the rejected binding-visibility,
 CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
 forcing and specialization flags passed their isolated confirmation blocks and
 are selected for an experimental cumulative build, not accepted source.
-Equal-leaf guards remain HOLD after final validation; `varIfUnknown` remains
-HOLD pending its final N1 block. External-fork trials
+Equal-leaf guards remain HOLD after final validation; `varIfUnknown` is rejected
+for integration after its final N1 block. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
 
 ## Reproduction
@@ -342,8 +342,8 @@ See [the batched rejection report](binding-visibility-batched-trial-20260910.md)
 The separate original→Make+sparse N8 result (−8.590% wall, −40.838% RSS)
 remains preserved in `make-binding-n8-evidence.tar.gz`, not an accepted result.
 
-Read-only unknown generalization (`varIfUnknown`) remains pending. Four N4
-confirmation pairs save 2.063 GB allocation (−0.51894% ± 0.00347 pp), but
+Read-only unknown generalization (`varIfUnknown`) is rejected for integration.
+Four N4 confirmation pairs save 2.063 GB allocation (−0.51894% ± 0.00347 pp), but
 wall −0.406% ± 2.695 pp and RSS −1.718% ± 3.014 pp establish neither a speed
 nor peak-memory win. Full 1,305/0 and all 14 clean-run product/warning checks
 pass. An independent dense-1000 N1 five-pair gate found allocation −0.41874%,
@@ -351,9 +351,26 @@ RSS +0.039% ± 0.063 pp, and no established timing change. Its subsequent full
 N1 screen saved 0.52147% allocation but increased wall 2.92244% and RSS
 2.08629%; all four package products/warning-content checks passed. This closed
 as HOLD/unaccepted, not proof of slowdown. The user subsequently authorized
-one final five-pair N1 block on xxlarge; no new source variant is included.
+one final five-pair N1 block on xxlarge; no new source variant was included.
 Retain [the original report](varifunknown-trial-20260910.md) and
 [independent HOLD checkpoint](varifunknown-binary-verification-20260910.md).
+
+That final N1 block completed once, with all five pairs and outliers retained.
+Mean paired wall changed +1.6889% ± 1.1693 pp sample SD (four of five slower),
+allocation −0.52047% ± 0.00109 pp, RSS +0.2295% ± 1.9598 pp, and maximum
+residency +0.7818% ± 2.7588 pp. Mean allocation savings of 2.070 GB do not
+justify the adverse timing and absent peak-memory benefit. This is a campaign
+tradeoff rejection, not a correctness failure or universal slowdown claim.
+No further repetitions, full N8, or cumulative inclusion follow.
+
+The lead verified the final archive hash, reproduced its audit byte-for-byte,
+and separately checked all 12 module-progress counters plus recorded binary,
+harness, and manifest identities. Raw time/RTS statistics, sample order, original
+745-warning/738-body multisets, and the original 8,985-product map all match.
+Binary/corpus/output bytes are excluded from this archive; their worker rehash
+is not represented as a lead rehash. See [the final N1 rejection report](varifunknown-n1-final-20260910.md).
+Review archive `varifunknown-n1-final.tar.gz` has SHA256
+`3677a5648836ba7836d2590ead5f52e410aebf05c1fb9312e3166c74a696100c`.
 
 Both inliner changes are rejected. The positive-arity guard alone changed
 N4 wall by −0.08% and allocation by −0.02%. Deferred argument-list creation
