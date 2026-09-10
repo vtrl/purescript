@@ -73,14 +73,15 @@ Concurrency ceiling: eight Ultra orbs including the lead; workers are
 `a1.large` or larger. Four orbs currently:
 
 - Lead owns the benchmark harness, non-profiled baseline, integration, and
-  combined correctness.
+  combined correctness; `Make.hs` parsing/AST lifetime trial.
 - `perf/profile-baseline-20260910`: baseline GHC CPU/allocation/heap profiles.
-- `perf/baseline-correctness-20260910`: optimized baseline full test suite.
+- Baseline correctness/native CPU worker now owns `perf/cst-unpack-20260910`:
+  representation of already-strict products in `CST/Types.hs` only.
 - `perf/nursery-trial-20260910`: default versus larger allocation areas,
   justified by 45% baseline GC time. Owns RTS/defaults experiments only.
 
-All compiler source is still at the original baseline. Shared harness/docs
-checkpoint is `c2834c2f`; algorithm ownership will follow measured hotspots.
+Shared source-equivalent harness checkpoint: `b89f5b49`. Candidate compiler
+changes are under development, not yet accepted into the campaign baseline.
 
 ## Results and trials
 
@@ -111,6 +112,67 @@ Raw logs, metadata, product hashes and samples are retained at
 `.build/perf/baseline-n1-warm`; review bundle:
 `.amp/in/artifacts/performance-20260910/baseline-n1-warm.tar.gz`.
 
-N4 warm and N1 cold baselines are queued serially. Profile-backed trials are
-in progress; no compiler optimization has been accepted yet. Instrumented
-profiling results will not be compared directly to these optimized timings.
+### Parallel and cold-cache baselines
+
+| RTS/cache | Samples | Wall mean ± sample SD (s) | Mean peak RSS (KiB) | Mean allocation (GB) |
+| --- | ---: | ---: | ---: | ---: |
+| N1 warm | 5 | 240.738 ± 2.419 | 3,294,523 | 397.431 |
+| N4 warm | 3 | 109.893 ± 0.297 | 3,445,921 | 397.520 |
+| N1 cold | 3 | 239.697 ± 2.695 | 3,290,953 | 397.433 |
+
+N4 samples: 109.78, 110.23, 109.67 s. Cold samples: 236.62, 240.83,
+241.64 s, each after successful guest `drop_caches`. All three product
+manifests are identical (8,985 files). The cold run also checked product
+identity between repetitions. Cold/warm differences are below the observed
+noise; they do not support a filesystem-cache explanation of the cost.
+N4 scaling is existing compiler behavior, not a campaign optimization.
+Raw review bundles accompany the N1 warm bundle under the artifacts directory.
+
+### Baseline correctness
+
+Optimized full suite passed: **1,301 examples, zero failures or pending**,
+all 13 groups, including 16 QuickCheck examples with 100 cases each.
+
+```sh
+env -u HSPEC_ACCEPT -u GHCRTS CI=true stack --no-terminal --jobs=8 test \
+  --lock-file=error-on-write --test-arguments='--seed 9160 --no-color'
+```
+
+No fixture patches or golden acceptance. Hspec elapsed 127.5614 s (not a
+compiler benchmark). Report and full log are copied to this lead thread's
+`baseline-correctness.md` and `baseline-full-tests.log` review artifacts.
+
+### Profiles and evidence-backed trials
+
+Native optimized `perf record -e cpu-clock:u -F 99` on the exact full corpus:
+24,857 leaf samples, zero lost. `evacuate1` 20.85%, `eval_thunk_selector`
+15.63%, `scavenge_block1` 4.14%: about 40.62% in these three GC leaves.
+17.07% of samples remain unresolved main-image addresses; there are no caller
+stacks or allocation attribution. Do not interpret small named compiler
+leaves as inclusive costs. Raw `perf.data`, complete leaf report, and method
+are preserved in the review artifacts. Hardware PMU events are unavailable;
+unprivileged software CPU-clock sampling worked without permission changes.
+
+Optimized, non-profiled `+RTS -N1 -s -hT -i1 -l-au -RTS` produced a live-heap
+profile and module markers with identical compiler products. Peak sampled
+live heap: 1,134.21 MiB, of which 439.72 MiB is CST constructors. Near the
+end, 198.59 MiB of CST remains in 930.80 MiB live heap. The early peak includes
+117.34 MiB CST source positions, 78.65 MiB token annotations, 58.99 MiB ranges,
+and 58.96 MiB source tokens. This is diagnostic: extra major collections made
+the run take 381.6 s; that duration is not a baseline comparison.
+
+This supports two independent source trials:
+
+- **CST packing:** explicit `UNPACK` of already-strict nested products may
+  remove headers/pointers, but can lose sharing or add reboxing; measure both.
+- **Make parsing admission:** body parsing currently occurs before dependency
+  waits and the semaphore, retaining full CSTs for modules that cannot run.
+  Trial delaying parsing until admitted, while still checking syntax when a
+  dependency failed and never holding the semaphore during dependency waits.
+  Separately inspect final result-order bookkeeping retaining parsed modules.
+
+Nursery screening is not yet a win: N1 A16 measured 251.46 s versus the
+worker's same-machine default 248.68 s, despite copied bytes falling from
+68.713 GB to 48.320 GB. A64 warm-up was 18.2% slower. These single-screen
+observations are provisional; the worker is checking N4 before recommending
+discard/retention. No compiler optimization has been accepted yet.
