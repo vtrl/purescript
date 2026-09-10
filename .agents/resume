@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# All prerequisites are files restored with the orb snapshot. This compiler
+# needs no database, service, or authentication to repair on resume.
