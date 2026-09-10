@@ -5,16 +5,18 @@ Original compiler baseline: `9160ce1518b5f11f9ebe32b445019f8dbb4f435a`, verified
 against the fork's `master` and default branch on 2026-09-10. Do not push to
 upstream or merge this campaign to master without separate authorization.
 
-The only accepted compiler optimization is [Make lifetime release
-38080a40](https://github.com/vtrl/purescript/commit/38080a40fc3a53de813a0ac46187e8c709dcbcc7).
-Later campaign commits preserve evidence, not the rejected binding-visibility,
-CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
-forcing and specialization flags passed their isolated confirmation blocks and
-independent audit. Their experimental cumulative build passed correctness;
-all prescribed cumulative timing and lead evidence checks are complete, with
-the final independent audit pending. Cumulative source is not yet accepted.
-Equal-leaf guards remain HOLD after final validation; `varIfUnknown` is rejected
-for integration after its final N1 block. External-fork trials
+**Campaign complete:** accepted source combines [Make lifetime release
+38080a40](https://github.com/vtrl/purescript/commit/38080a40fc3a53de813a0ac46187e8c709dcbcc7),
+[parser-warning forcing](https://github.com/vtrl/purescript/commit/33279b32cf25fbd2393992a02e3ebee013ca4f54),
+and [attributed specialization flags](https://github.com/vtrl/purescript/commit/d87585328dc660ed7f9807928570566e20101dc0).
+The integrated source/test/config tree exactly matches the tested cumulative
+candidate. All seven timing blocks and the independent audit passed; the lead
+also replayed all 116 raw records and 32,715 audit-bundle payload checksums.
+Acceptance is for the measured batch-compilation tradeoff, with larger executable,
+small-fixture RSS and N1 Gen0-pause costs retained below. These are memory-lifetime
+and GHC specialization improvements, not an algorithmic-complexity breakthrough.
+Binding-visibility, CST packing, inliner, traversal-INLINABLE and `varIfUnknown`
+remain rejected; equal-leaf guards remain HOLD and excluded. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
 
 ## Reproduction
@@ -73,8 +75,9 @@ input hashes and refuses simultaneous runs on the same corpus. Final-output
 hashes cover generated JS, FFI, externs, and requested CoreFn, not build-cache
 timestamps. Compare candidate/baseline samples on the **same machine**, with
 identical capabilities/cache/codegen flags; alternate repeated blocks to
-check drift. Worker-machine timings are only provisional until reproduced
-by the lead.
+check drift. Initial worker screens were provisional. Final acceptance uses
+the fixed xxlarge confirmation matrix and independent raw-data audit described
+below; lead replay is not a fresh timing run.
 
 For counterbalanced comparisons, add `--baseline /path/to/purs-baseline`
 and supply the candidate with `--compiler`. `--samples 5` then measures five
@@ -507,8 +510,9 @@ on Make-equivalent report checkpoint
 [c44600e8](https://github.com/vtrl/purescript/commit/c44600e8f7a390ad73a46f8932e8f90a21b40a8a).
 Its separately owned xxlarge worker completed the exact two-patch union,
 normal optimized build and full tests, preserving the final tested executable.
-Leaf, varIfUnknown, and all rejected variants are excluded. This is a reversible
-experimental branch, not acceptance into the campaign.
+Leaf, varIfUnknown, and all rejected variants are excluded. The experiment was
+kept separate until the complete matrix and independent audit passed; the final
+acceptance below integrates exactly that tested union.
 
 Tested source is
 [d0d4b331](https://github.com/vtrl/purescript/commit/d0d4b3313f37ad9f79997eb6a852dc83aa2f0336).
@@ -535,8 +539,8 @@ No outliers may be dropped, old samples pooled, or adaptive repeats added.
 All seven blocks completed: 51 measured pairs / 102 measured compiles plus
 14 excluded warmups, 116 compiles in total. Full/tiny original products and
 warning contents and local dense products/diagnostics pass; no measured run was
-retried or discarded. Independent raw-evidence audit remains required before
-source integration.
+retried or discarded. The independent raw-evidence audit and lead replay passed
+before source integration.
 
 ### The completed cumulative matrix favors throughput with explicit costs
 
@@ -593,9 +597,60 @@ Review archives are under `.amp/in/artifacts/performance-20260910/`:
 | `cumulative-n4-raw.tar.gz` | `6cd5b71d3e46ca228ce2ec5b0c0f6336b840c146cec73d72fbeefe36dcc8df6f` |
 | `cumulative-boundaries-raw.tar.gz` | `c9874a504036ac6a12de8fcf64d07b93b61a7359dc879bd2220a2f2c8c5c4de7` |
 | `cumulative-boundaries-products.tar.gz` | `2b40177c0cda4d1d02f0332cf2bb694cae724b53900538a6db8ca6e75ef438d9` |
+| `cumulative-independent-audit.tar.gz` | `7187d478e02dedd3decb579c51db096ec26c1f5c449d841f1e08fd2314ece7c3` |
 
-The lead recommends this tradeoff for the campaign's batch-compilation goal,
-conditional on the final independent audit: substantial full-corpus time and
-peak-memory reductions outweigh the measured small/dense RSS and executable
-growth here. This is not a claim that the candidate dominates on every metric
-or workload. Accepted source remains Make-only until that gate closes.
+### Final audit passed; the exact tested union is accepted on the campaign branch
+
+The [independent audit](performance-cumulative-independent-audit-20260910.md)
+found no material source, binary, diagnostic, product or statistical contradiction.
+The lead downloaded its 73,597,056-byte bundle, verified the archive hash above,
+and executed its portable reader after extraction:
+
+```text
+python3 -B cumulative-independent-audit/replay.py
+PASS: all 32715 bundle payload checksums.
+PASS: 7 blocks / 51 measured pairs / 14 excluded warmups / 116 raw records; raw results exactly reproduce original independent calculation.
+PASS: original warning multiplicities/internal whitespace, input bytes, retained final products, secondary RTS values and snapshot counters.
+```
+
+The reduced replay excludes binary/archive/Git provenance checks; those were
+performed separately against original deliveries. It does not rebuild or run the
+compiler, tests or benchmarks. The independent result JSON has SHA256
+`17779034218085d4bdceb75a4e8e93cb8b8fcca3c27497b89caafbfd0621fa20`.
+Original archived/runtime executable modes are 0555. The auditor's extracted
+0755 copies were reproduced by Python's data-filter normalization with unchanged
+bytes; this is not a packaging discrepancy. The missing-PSI setup failure, both
+corrected reader assumptions and their failed attempt logs remain in the bundle.
+
+The lead accepts this tradeoff for the campaign's batch-compilation goal:
+substantial full-corpus time and peak-memory reductions outweigh the measured
+small/dense RSS and executable growth here. This is not a claim that the candidate
+dominates on every metric or workload. Percentages in this matrix compare with
+the accepted Make baseline, not the original compiler; earlier Make gains are
+not added to them.
+
+The audit report was imported as
+[ac384589](https://github.com/vtrl/purescript/commit/ac38458988ac8ac8eafd07fa9ca5e5ba0363214f).
+Warning source/test was cherry-picked as
+[33279b32](https://github.com/vtrl/purescript/commit/33279b32cf25fbd2393992a02e3ebee013ca4f54),
+then flags as
+[d8758532](https://github.com/vtrl/purescript/commit/d87585328dc660ed7f9807928570566e20101dc0),
+preserving original authors, dates, cherry-pick trailers and seastian/upstream
+PR4584 attribution. The integrated tree outside `debug` matches tested source
+`d0d4b3313f37ad9f79997eb6a852dc83aa2f0336` exactly. The union patch SHA256 remains
+`e1975195ba218be2fd423a9f32d0099950581cb11a95e9d5941146f81a4bd677` and the
+compiler/test/config tree manifest remains
+`d52adaa25fa0fc9b880bd1cbcd0f86a239a83fcdc47ea0fe0b56a202e294aa48`.
+
+Final integration verification includes `git diff --check` and the following
+zero-diff check, both exit 0:
+
+```sh
+git diff --exit-code d0d4b3313f37ad9f79997eb6a852dc83aa2f0336 HEAD -- . ':!debug'
+```
+
+The full 1,303/0 and Make 14/0 suites ran on that exact tested union in the build
+worker; the lead audited their logs rather than rerunning a build after these
+identity-preserving cherry-picks. No new measurement was added. Campaign/trial
+branches and evidence remain preserved; this acceptance does not merge to
+`master`, upstream, or a release, and no further trials are in progress.
