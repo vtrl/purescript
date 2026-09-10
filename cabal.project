@@ -5,3 +5,6 @@ source-repository-package
    type: git
    location: https://github.com/purescript/cheapskate.git
    tag: 8bfaf4beeb108e97a274ed51303f278905979e87
+
+package purescript
+  ghc-options: -fspecialize-aggressively -fexpose-all-unfoldings
