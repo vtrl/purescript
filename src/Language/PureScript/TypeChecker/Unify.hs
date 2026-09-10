@@ -30,7 +30,7 @@ import Language.PureScript.Crash (internalError)
 import Language.PureScript.Environment qualified as E
 import Language.PureScript.Errors (ErrorMessageHint(..), MultipleErrors, SimpleErrorMessage(..), SourceAnn, errorMessage, internalCompilerError, onErrorMessages, rethrow, warnWithPosition, withoutPosition)
 import Language.PureScript.TypeChecker.Kinds (elaborateKind, instantiateKind, unifyKinds')
-import Language.PureScript.TypeChecker.Monad (CheckState(..), Substitution(..), UnkLevel(..), Unknown, getLocalContext, guardWith, lookupUnkName, withErrorMessageHint)
+import Language.PureScript.TypeChecker.Monad (CheckState(..), Substitution(..), UnkLevel(..), Unknown, getLocalContext, guardWith, withErrorMessageHint)
 import Language.PureScript.TypeChecker.Skolems (newSkolemConstant, skolemize)
 import Language.PureScript.Types (Constraint(..), pattern REmptyKinded, RowListItem(..), SourceType, Type(..), WildcardData(..), alignRowsWith, everythingOnTypes, everywhereOnTypes, everywhereOnTypesM, getAnnForType, mkForAll, rowFromList, srcTUnknown)
 
@@ -203,21 +203,16 @@ replaceTypeWildcards = everywhereOnTypesM replace
 --
 varIfUnknown :: forall m. (MonadState CheckState m) => [(Unknown, SourceType)] -> SourceType -> m SourceType
 varIfUnknown unks ty = do
-  bn' <- traverse toBinding unks
-  ty' <- go ty
-  pure $ mkForAll bn' ty'
-  where
-  toName :: Unknown -> m T.Text
-  toName u = (<> T.pack (show u)) . fromMaybe "t" <$> lookupUnkName u
+  names <- gets (substNames . checkSubstitution)
+  let
+    toName :: Unknown -> T.Text
+    toName u = fromMaybe "t" (M.lookup u names) <> T.pack (show u)
 
-  toBinding :: (Unknown, SourceType) -> m (SourceAnn, (T.Text, Maybe SourceType))
-  toBinding (u, k) = do
-    u' <- toName u
-    k' <- go k
-    pure (getAnnForType ty, (u', Just k'))
+    toBinding :: (Unknown, SourceType) -> (SourceAnn, (T.Text, Maybe SourceType))
+    toBinding (u, k) = (getAnnForType ty, (toName u, Just (go k)))
 
-  go :: SourceType -> m SourceType
-  go = everywhereOnTypesM $ \case
-    (TUnknown ann u) ->
-      TypeVar ann <$> toName u
-    t -> pure t
+    go :: SourceType -> SourceType
+    go = everywhereOnTypes $ \case
+      (TUnknown ann u) -> TypeVar ann (toName u)
+      t -> t
+  pure $ mkForAll (map toBinding unks) (go ty)
