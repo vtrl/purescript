@@ -70,13 +70,47 @@ Linux 6.1.158+, x86-64, KVM. No explicit CPU quota. Record machine metadata
 with each run rather than assuming every large orb is identical.
 
 Concurrency ceiling: eight Ultra orbs including the lead; workers are
-`a1.large` or larger. Initially only two orbs: lead owns the benchmark
-harness, non-profiled baseline, integration, and combined correctness;
-`perf/profile-baseline-20260910` owns baseline GHC CPU/allocation/heap
-profiling. Optimization ownership is assigned only after measured hotspots.
+`a1.large` or larger. Four orbs currently:
+
+- Lead owns the benchmark harness, non-profiled baseline, integration, and
+  combined correctness.
+- `perf/profile-baseline-20260910`: baseline GHC CPU/allocation/heap profiles.
+- `perf/baseline-correctness-20260910`: optimized baseline full test suite.
+- `perf/nursery-trial-20260910`: default versus larger allocation areas,
+  justified by 45% baseline GC time. Owns RTS/defaults experiments only.
+
+All compiler source is still at the original baseline. Shared harness/docs
+checkpoint is `c2834c2f`; algorithm ownership will follow measured hotspots.
 
 ## Results and trials
 
-Baseline measurements and profile-backed trials are in progress. No compiler
-optimization has been accepted yet. This section is updated at checkpoints;
-do not interpret harness setup or instrumented timings as a performance win.
+### Optimized baseline, warm page cache, clean JS build, N1
+
+Five measured runs, after one excluded full warm-up:
+
+| Sample | Wall (s) | Peak RSS (KiB) | Allocated (bytes) |
+| --- | ---: | ---: | ---: |
+| 1 | 239.23 | 3,266,840 | 397,431,633,280 |
+| 2 | 242.18 | 3,240,368 | 397,436,996,408 |
+| 3 | 242.69 | 3,415,480 | 397,423,962,632 |
+| 4 | 237.20 | 3,257,464 | 397,431,441,456 |
+| 5 | 242.39 | 3,292,464 | 397,430,732,496 |
+
+Wall mean **240.738 s**, median 242.18 s, sample SD 2.419 s, CV 1.005%.
+Mean RSS 3,294,523 KiB (3.142 GiB), SD 70,191 KiB. Mean allocation
+397,430,953,254 bytes. All 4,084 modules compiled successfully every run.
+The excluded warm-up took 236.71 s, with 105.58 s GC (45% elapsed), 94,349
+minor and 37 major collections. This suggests investigating allocation
+provenance and nursery pressure; it is not itself an optimization result.
+
+Preserved compiler SHA256:
+`d105283e23997dc02c531fcfce7036554c6d68599ee528536bfafd35375e3d00`.
+Its version reports original `9160ce1` plus `DIRTY`: only untracked benchmark
+harness/docs existed when it was built; `src`, `app`, and `lib` were unchanged.
+Raw logs, metadata, product hashes and samples are retained at
+`.build/perf/baseline-n1-warm`; review bundle:
+`.amp/in/artifacts/performance-20260910/baseline-n1-warm.tar.gz`.
+
+N4 warm and N1 cold baselines are queued serially. Profile-backed trials are
+in progress; no compiler optimization has been accepted yet. Instrumented
+profiling results will not be compared directly to these optimized timings.
