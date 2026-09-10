@@ -11,7 +11,8 @@ Later campaign commits preserve evidence, not the rejected binding-visibility,
 CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
 forcing and specialization flags passed their isolated confirmation blocks and
 independent audit. Their experimental cumulative build passed correctness;
-paired cumulative performance validation is next, not accepted source.
+all prescribed cumulative timing and lead evidence checks are complete, with
+the final independent audit pending. Cumulative source is not yet accepted.
 Equal-leaf guards remain HOLD after final validation; `varIfUnknown` is rejected
 for integration after its final N1 block. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
@@ -110,11 +111,14 @@ remain idle unless assigned a separately owned next task.
 - The cumulative builder completed the exact source union, optimized build,
   full tests, and preservation of the final tested binary. Its branch remains
   `perf/cumulative-warning-specialization-20260910`, separate from acceptance.
-- Three existing xxlarge binary workers are reused for cumulative full N1-three,
+- Three existing xxlarge binary workers completed cumulative full N1-three,
   full N4-five, and full N8-three plus dense-ten/tiny-ten-per-capability blocks.
-  No additional orb or source variant is needed.
+  Their services are stopped. The independent worker is auditing all final
+  archives; no additional orb, timing block, or source variant is planned.
 
-New machines expose 16 logical Xeon CPUs and a 30 GiB workload limit. Fixed
+New machines expose 16 logical Xeon CPUs. The final cumulative workers recorded
+29.5 GiB workload memory limits in their before/after snapshots, versus earlier
+30 GiB observations; no constant limit is inferred for unsampled intervals. Fixed
 N1/N4/N8 settings, exact baseline/candidate binary hashes, original corpus,
 excluded warmups, and within-machine counterbalancing remain unchanged.
 Do not pool measurements across different machines or treat capacity as
@@ -128,8 +132,10 @@ replaces it as a separate experiment. Long blocks use managed services with
 an atomic run-once guard, recorded exit status, and an idle hold after completion
 until collection and service stop. This prevents automatic restarts from
 silently adding samples. The exact tested cumulative binary and final standalone
-audit now pass review. Only the prescribed fresh matrix below is assigned;
-there are no provisional or repeated selection screens.
+audit pass review. The prescribed fresh matrix below is complete, with no
+provisional or repeated selection screens. One boundary preparation attempt
+failed on unavailable optional PSI fields before any harness invocation; its
+guard/log/status remain preserved separately from the successful measurement.
 
 Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
 is the first accepted compiler checkpoint. Other source trials started from
@@ -526,6 +532,70 @@ warm cache and JS-only code generation through the unchanged harness. All use
 the tested cumulative binary above against preserved Make baseline SHA256
 `7e56d47ac5cdbb7e13e278f97b60abe2311b642bbb3dc545b86139e4da7a1b3a`.
 No outliers may be dropped, old samples pooled, or adaptive repeats added.
-Full/tiny original products and warning contents, local dense products/diagnostics,
-and independent raw-evidence audit are required before any integration claim.
-No cumulative timing result is available at this checkpoint.
+All seven blocks completed: 51 measured pairs / 102 measured compiles plus
+14 excluded warmups, 116 compiles in total. Full/tiny original products and
+warning contents and local dense products/diagnostics pass; no measured run was
+retried or discarded. Independent raw-evidence audit remains required before
+source integration.
+
+### The completed cumulative matrix favors throughput with explicit costs
+
+Changes compare exact cumulative C directly with preserved Make B, within pairs.
+SD is sample SD in percentage points, not a confidence interval. These separate
+blocks are not pooled with each other or with any earlier screen/standalone block.
+
+| Block | Pairs | Wall change ± SD pp | Peak RSS change ± SD pp | Allocation change | Sampled residency change |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Full N1 | 3 | −35.1418% ± 1.1817 | −20.6802% ± 2.6366 | −43.6402% | −14.1143% |
+| Full N4 | 5 | −31.5247% ± 1.3735 | −18.7239% ± 4.7282 | −43.6284% | −13.0498% |
+| Full N8 | 3 | −28.1745% ± 5.1006 | −12.8477% ± 3.4204 | −43.6307% | −11.4866% |
+| Dense1000 N1 | 10 | −12.8782% ± 12.4587 | +15.8500% ± 0.0972 | −43.7443% | +15.4928% |
+| Tiny N1 | 10 | −39.2261% ± 6.7584 | +8.0487% ± 1.8836 | −49.6742% | −4.4901% |
+| Tiny N4 | 10 | −42.3102% ± 4.6490 | +9.3452% ± 2.9287 | −49.6291% | +3.5193% |
+| Tiny N8 | 10 | −44.6106% ± 0.8297 | +6.3624% ± 3.1066 | −49.6993% | +0.8796% |
+
+Every full-corpus measured pair improves all four primary metrics. Mean peak RSS
+falls 1,745.167→1,384.694 MiB at N1, 1,957.048→1,589.966 MiB at N4, and
+2,121.947→1,848.314 MiB at N8. Small/dense costs remain: dense mean RSS rises
+138.526→160.482 MiB (+21.956 MiB), while tiny rises 46.584→50.327 MiB at N1,
+60.950→66.628 MiB at N4, and 80.980→86.111 MiB at N8. Dense pairs 2 and 6
+are slower, retained at +1.4286% and +4.4776%; its noisy timing is not a uniform
+speedup. The executable remains 22,653,120 bytes / 47.3222% larger.
+
+N1 maximum Gen0 pauses increase from 8.5–10.6 ms to 51.8–54.2 ms, while Gen1
+maxima fall from 519.8–539.4 ms to 326.3–369.0 ms. No all-pause improvement,
+startup/cold-paging equivalence, or IDE-latency claim follows. N1 baseline wall
+drifts upward across its three pairs; fixed order and shared-host scheduling
+remain limitations. N1 ran a brief first-pair validator while C2 continued;
+this capture activity is not described as an entirely analysis-free interval.
+
+The lead verified all delivered archive hashes, 16,756 N1 payload checksums,
+9,069 N4 payload checksums, and 488 boundary raw / 9,122 boundary product checksums.
+N1's offline replay matches its recorded analysis byte-for-byte, including both
+actual binaries, all 4,901 actual input files, original final products, and all
+raw time/RTS/argv/warning checks. Independent lead N4 raw-record reconstruction
+matches all statistics and original warnings; its 8,987-file actual retained
+tree matches the original 8,985 products plus two cache/package files. N4 input
+bytes are not archived: worker pre/post rehashes are not called lead rehashes.
+Boundary replay matches all five blocks and directly rehashes retained products;
+relocated reference paths are the only differing analysis fields. Per-run product
+equality remains an unchanged-harness assertion, not 116 retained output trees.
+
+Full raw tables, warmups, provenance and caveats are in the
+[N1 report](performance-cumulative-n1-xxlarge-20260910.md),
+[N4 report](performance-cumulative-n4-xxlarge-20260910.md), and
+[N8/boundary report](cumulative-boundaries-xxlarge-20260910.md).
+Review archives are under `.amp/in/artifacts/performance-20260910/`:
+
+| Archive | SHA256 |
+| --- | --- |
+| `cumulative-n1-raw.tar.gz` | `c4cdf5a327a445a38859a2f3dd692cecc88efb970aca32a641c74a627c13ac3e` |
+| `cumulative-n4-raw.tar.gz` | `6cd5b71d3e46ca228ce2ec5b0c0f6336b840c146cec73d72fbeefe36dcc8df6f` |
+| `cumulative-boundaries-raw.tar.gz` | `c9874a504036ac6a12de8fcf64d07b93b61a7359dc879bd2220a2f2c8c5c4de7` |
+| `cumulative-boundaries-products.tar.gz` | `2b40177c0cda4d1d02f0332cf2bb694cae724b53900538a6db8ca6e75ef438d9` |
+
+The lead recommends this tradeoff for the campaign's batch-compilation goal,
+conditional on the final independent audit: substantial full-corpus time and
+peak-memory reductions outweigh the measured small/dense RSS and executable
+growth here. This is not a claim that the candidate dominates on every metric
+or workload. Accepted source remains Make-only until that gate closes.
