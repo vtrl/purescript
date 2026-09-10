@@ -64,6 +64,7 @@ def main():
         }
         (results / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
         rows = []
+        first_products = None
         # Warm-up is a full clean compile and is explicitly excluded from samples.
         runs = ['warmup', *map(str, range(1, args.samples + 1))] if args.cache == 'warm' else list(map(str, range(1, args.samples + 1)))
         for run in runs:
@@ -84,6 +85,16 @@ def main():
             residency = re.search(r'([\d,]+) bytes maximum residency', stderr)
             if not allocations or not residency:
                 raise SystemExit('Missing RTS statistics')
+            # Hash outside the timed process. Detect nondeterminism across runs,
+            # not just differences between the final baseline/candidate outputs.
+            products = {str(path.relative_to(output)): sha256(path) for path in sorted(output.rglob('*'))
+                        if path.is_file() and path.name in ['index.js', 'foreign.js', 'externs.cbor', 'corefn.json']}
+            if first_products is None:
+                first_products = products
+                (results / 'products.json').write_text(json.dumps(products, indent=2) + '\n')
+            elif products != first_products:
+                (results / f'{run}.products.json').write_text(json.dumps(products, indent=2) + '\n')
+                raise SystemExit(f'Compiler products changed between repetitions: {run}')
             row = {'run': run, 'wall_s': wall, 'monotonic_s': elapsed, 'user_s': user, 'system_s': system,
                    'peak_rss_kib': int(rss), 'allocated_bytes': int(allocations[1].replace(',', '')),
                    'max_residency_bytes': int(residency[1].replace(',', ''))}
@@ -98,10 +109,6 @@ def main():
                               'stdev': statistics.stdev(values) if len(values) > 1 else None,
                               'min': min(values), 'max': max(values)}
         (results / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
-        # Compare only deterministic compiler products, not timestamp/cache metadata.
-        products = {str(path.relative_to(output)): sha256(path) for path in sorted(output.rglob('*'))
-                    if path.is_file() and path.name in ['index.js', 'foreign.js', 'externs.cbor', 'corefn.json']}
-        (results / 'products.json').write_text(json.dumps(products, indent=2) + '\n')
         print(json.dumps(summary, indent=2))
 
 
