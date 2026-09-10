@@ -25,8 +25,8 @@ data SourcePos = SourcePos
   } deriving (Show, Eq, Ord, Generic, NFData)
 
 data SourceRange = SourceRange
-  { srcStart :: !SourcePos
-  , srcEnd :: !SourcePos
+  { srcStart :: {-# UNPACK #-} !SourcePos
+  , srcEnd :: {-# UNPACK #-} !SourcePos
   } deriving (Show, Eq, Ord, Generic, NFData)
 
 data Comment l
@@ -39,7 +39,7 @@ data LineFeed = LF | CRLF
   deriving (Show, Eq, Ord, Generic, NFData)
 
 data TokenAnn = TokenAnn
-  { tokRange :: !SourceRange
+  { tokRange :: {-# UNPACK #-} !SourceRange
   , tokLeadingComments :: ![Comment LineFeed]
   , tokTrailingComments :: ![Comment Void]
   } deriving (Show, Eq, Ord, Generic, NFData)
@@ -84,7 +84,7 @@ data Token
   deriving (Show, Eq, Ord, Generic, NFData)
 
 data SourceToken = SourceToken
-  { tokAnn :: !TokenAnn
+  { tokAnn :: {-# UNPACK #-} !TokenAnn
   , tokValue :: !Token
   } deriving (Show, Eq, Ord, Generic, NFData)
 
