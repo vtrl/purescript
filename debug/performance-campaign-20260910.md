@@ -372,8 +372,10 @@ qualification, not proof of latency equivalence or universal speedup.
 
 The supplied source passed the lead's 1,303/0 suite. An independent exact-source
 optimized build also passed 1,303/0, separate Make 14/0, and focused warning/error
-checks 5/0. Independent raw audits preserve all samples and verify the package
-warning multiset. Those 745 warnings contain no `WarningParsingModule` codes:
+checks 5/0. The [independent correctness/evidence audit](parser-warning-force-correctness-audit-20260910.md)
+is collected: all 104 archived file checksums pass, and the lead's offline
+recomputation exactly matches its recorded JSON. Raw audits preserve all samples
+and verify the package warning multiset. Those 745 warnings contain no `WarningParsingModule` codes:
 nonempty parser warnings are covered by targeted tests, not this corpus.
 Per-run product checks are supported by harness execution and saved maps;
 archives do not contain every separate generated tree.

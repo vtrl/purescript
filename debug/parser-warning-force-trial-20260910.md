@@ -183,8 +183,8 @@ qualification rather than asserting latency equivalence or universal speedup.
 Boundary archives are `parser-warning-force-n8.tar.gz` and
 `parser-warning-force-tiny.tar.gz` in the lead review artifacts directory.
 
-The candidate remains unaccepted pending the fresh N4 block and collection of
-the independent correctness/evidence audit. No compiler changes were made during measurement,
+The candidate remains unaccepted pending the fresh N4 block. The independent
+correctness/evidence audit is complete and collected. No compiler changes were made during measurement,
 and no rejected visibility, unification, or specialization variant was mixed in.
 
 ## Audit scope and diagnostic heap evidence
@@ -194,6 +194,15 @@ from raw time/RTS files, without importing or executing the supplied harness.
 All 12 completed runs have 4,084 distinct module progress entries, expected
 RTS capabilities, and complete matching sample values. Warning multiplicity
 is 737 bodies once and one body eight times, equal to the original transcript.
+
+The [complete independent audit](parser-warning-force-correctness-audit-20260910.md)
+is retained report-only. The lead verified its archive SHA256 and all 104
+internal file checksums, inspected full-suite/Make/focused logs, and reran the
+offline archive analysis from a relocated copy: output exactly matched the
+archived JSON. The local review bundle is `parser-warning-force-correctness-audit.tar.gz`
+under `.amp/in/artifacts/performance-20260910/`, SHA256
+`a4ab708e00c4b4c5d1adfd2acc328bc3d070eb4bdee18f0196ebcd01b13051ae`.
+No benchmark or compiler test was rerun in the lead orb for this import.
 
 Important coverage limit: the corpus's 745 warnings contain **zero
 `WarningParsingModule` diagnostics**. They verify unchanged other diagnostics
