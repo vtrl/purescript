@@ -257,7 +257,9 @@ make ma@MakeActions{..} ms = do
       -- which cannot yet compile. Never hold the semaphore while waiting for
       -- dependencies, and still report parse errors when a dependency failed.
       bracket_ (C.waitQSem lock) (C.signalQSem lock) $ do
-        let pwarnings' = CST.toMultipleWarnings fp pwarnings
+        -- Even an empty warning list can close over parser state. Force it
+        -- before the global log and build result retain it past this module.
+        pwarnings' <- evaluate . force $ CST.toMultipleWarnings fp pwarnings
         tell pwarnings'
         m <- CST.unwrapParserError fp mres
         case mexterns of
