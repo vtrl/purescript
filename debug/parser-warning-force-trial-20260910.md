@@ -114,3 +114,117 @@ are preserved in the lead review bundle
 Working data is under `.build/perf/parse-warnings-force/`; the executable is
 preserved separately from later builds. Only this isolated trial/report branch
 is pushed; accepted campaign source and master remain unchanged.
+
+## N4 confirmation was interrupted after three complete pairs
+
+The original five-pair confirmation did not finish. At the next inspection,
+neither the harness nor compiler process remained; Amp's process had restarted
+around the interruption. `candidate-4.stderr` ends during module 2,802 of
+4,084, its stdout/time files are empty, and `summary.json` does not exist. The
+command's exit status is unavailable. This is an interrupted block, not a
+completed five-pair result or a performance outlier to discard.
+
+All original logs remain intact, including the incomplete fourth candidate.
+The three complete pairs, in B/C, C/B, B/C order, are:
+
+| Pair | Baseline wall s | Candidate wall s | Baseline RSS KiB | Candidate RSS KiB |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 111.82 | 110.07 | 2,041,264 | 1,446,308 |
+| 2 | 109.31 | 107.78 | 2,046,488 | 1,473,784 |
+| 3 | 110.74 | 106.52 | 1,966,344 | 1,400,080 |
+
+Descriptive statistics of only these complete pairs: mean paired wall
+−2.2585% ± 1.3468 pp sample SD, RSS −28.6430% ± 0.5961 pp, residency
+−27.0666% ± 2.1774 pp, allocation +0.002113% ± 0.009705 pp. These must not
+be relabeled as the prespecified five-pair confirmation. All eight completed
+compiles, including warmups, passed product checks and their 745-warning
+content multisets independently match the original baseline transcript.
+The partial fourth run has no correctness or timing claim.
+
+A fresh, separate five-pair N4 block is assigned on `a1.xxlarge`, under the
+user's new ceiling of 16 total orbs and latest requirement of xxlarge only for
+new workers. Fixed `-N4`, exact binaries, corpus, and counterbalancing remain
+unchanged. Do not pool its timings with the interrupted smaller-orb block.
+Long blocks now use managed services with an atomic run-once guard and recorded
+exit status. Services restart even after success, so the wrapper stays idle
+after completion until collection rather than accidentally rerunning samples.
+
+## Independent N1, N8, and boundary evidence
+
+The independent full-corpus N1 screen completed one measured pair after
+excluded warmups: 246.83→243.38 s (−1.3977%), RSS 1,809,712→1,224,052 KiB
+(−32.3621%), residency −27.1378%, allocation −0.001153%. It supports a
+memory signal, not an established speedup. Its dense-1000 N1 five-pair gate,
+plus two excluded warmups (12 total compiles), found mean paired wall
+−0.7806% ± 5.0145 pp sample SD, effectively unchanged RSS/residency, and only
++432 allocated bytes. Local products and empty diagnostics matched.
+
+The final N1 audit passed all four package runs against the original
+8,985-product manifest and exact 745-warning content multiset. The lead
+independently checked all 16 raw run logs, fixed N1 RTS settings, complete
+module progress, measured GNU-time/RTS values against sample rows, paired
+order, warning multiplicities, and saved manifest/harness identities. The
+worker's [report-only checkpoint](https://github.com/vtrl/purescript/commit/ca508b102588569881386200cb9f5f0977cddd2a)
+contains no compiler changes. Preserved archive `parser-warning-force-n1-dense.tar.gz`
+has SHA256 `c322360672137ddff2b4c57438f889c7eba614a0e7569b636b4ebbba00bec578`.
+
+Independent N8 three-pair verification completed, with wall pairs
+71.84→70.74, 73.31→71.27, 75.51→72.82 s. Mean paired wall change is
+−2.6254% ± 1.0247 pp sample SD, RSS −25.0243% ± 1.1587 pp, residency
+−24.0960% ± 1.6376 pp; allocation is essentially unchanged. Every pair
+improved wall/RSS/residency, and all eight compiles including warmups match
+8,985 original products and 745 warning contents.
+
+Tiny Sequence ten-pair blocks at N1/N4/N8 completed with all 66 compiles
+matching 135 products and three warning contents. Mean paired wall changes:
+N1 +2.9807% ± 6.8193 pp, N4 −2.1867% ± 5.4516 pp, N8 +0.7208% ± 4.8286 pp.
+RSS changes are small and mixed. N1 mean wall increased by 33 ms; keep this
+qualification rather than asserting latency equivalence or universal speedup.
+Boundary archives are `parser-warning-force-n8.tar.gz` and
+`parser-warning-force-tiny.tar.gz` in the lead review artifacts directory.
+
+The candidate remains unaccepted pending the fresh N4 block and collection of
+the independent correctness/evidence audit. No compiler changes were made during measurement,
+and no rejected visibility, unification, or specialization variant was mixed in.
+
+## Audit scope and diagnostic heap evidence
+
+An independent audit recomputed the original screen and N8 results directly
+from raw time/RTS files, without importing or executing the supplied harness.
+All 12 completed runs have 4,084 distinct module progress entries, expected
+RTS capabilities, and complete matching sample values. Warning multiplicity
+is 737 bodies once and one body eight times, equal to the original transcript.
+
+Important coverage limit: the corpus's 745 warnings contain **zero
+`WarningParsingModule` diagnostics**. They verify unchanged other diagnostics
+and the empty parser-warning path, not nonempty parser warnings. The new
+asymmetric Make test and the independent focused source checks cover that
+separate behavior. The independent optimized source build passed the full
+seed-9160 suite (1,303/0), separate default-RTS Make subset (14/0), and five
+focused warning/error/exception cases (5/0), with no tracked source or golden
+changes. Its executable has a different hash from the supplied timing binary;
+source identity does not imply byte identity. The existing
+non-threaded test executable cannot support explicit N1/N8 test claims.
+
+Each retained package product map equals the original 8,985-product map.
+Per-run product equality relies on the unchanged harness's successful checks
+before emitting each row; archives do not contain separate per-run product
+trees. Binary provenance in those archives is recorded metadata, while the
+lead separately preserves and hashes the actual supplied executables. Warning
+canonical hashes from different workers use different serializations; compare
+the complete multisets rather than equating those digest strings.
+
+Exactly one separate normal-binary N1 type-heap diagnostic completed with
+`-s -hT -i1 -l-au`, matching all original products and warning contents. Against
+the saved accepted-Make profile, total sampled peak was 589.75→407.72 MiB,
+independent CST peak 80.02→53.34 MiB, and near-end CST 51.20→0.36 MiB.
+The final tenth by nonempty sample count averaged CST 53.39→3.49 MiB;
+the candidate tail retained its 15.53 MiB excursion. Thus the observed late
+51–55 MiB plateau is absent in this run, but CST is not eliminated.
+
+This is one instrumented comparison across orbs, not a timing result or proof
+of exact retaining roots. Sampling/GC/phase positions differ. Its role is
+supporting heap-shape evidence only; normal-build gates still govern acceptance.
+Raw heap/eventlog/argv/manifests/full series and independent analysis remain in
+`.build/perf/warning-force-worker-heap-evidence.tar.gz`, SHA256
+`5a98343b3b983577742251088a5a8c72654c4e42d22a04b8df14f5d67d88b93c`.
