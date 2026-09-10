@@ -230,7 +230,7 @@ inlineCommonOperators expander = everywhereTopDown $ applyAll $
     go :: Int -> [AST] -> AST -> Maybe AST
     go 0 acc (App ss (Ref runFnN) [fn]) | isNFn runFn_ n runFnN && length acc == n =
       Just $ res ss fn acc
-    go m acc (App _ lhs [arg]) = go (m - 1) (arg : acc) lhs
+    go m acc (App _ lhs [arg]) | m > 0 = go (m - 1) (arg : acc) lhs
     go _ _   _ = Nothing
 
   inlineNonClassFunction :: (AST -> Bool) -> (AST -> AST -> AST) -> AST -> AST

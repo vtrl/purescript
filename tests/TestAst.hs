@@ -6,12 +6,16 @@ import Protolude hiding (Constraint, Type, (:+))
 import Control.Lens ((+~))
 import Control.Newtype (ala')
 import Generic.Random (genericArbitraryRecG, genericArbitraryUG, listOf', uniform, withBaseCase, (:+)(..))
-import Test.Hspec (Spec, describe, it)
+import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Arbitrary(..), Gen, Property, Testable, counterexample, forAllShrink, subterms, (===))
 
+import Language.PureScript.AST.SourcePos (SourcePos(..), SourceSpan(..))
+import Language.PureScript.Constants.Libs qualified as C
+import Language.PureScript.CoreImp.AST qualified as JS
+import Language.PureScript.CoreImp.Optimizer.Inliner (inlineCommonOperators)
 import Language.PureScript.Label (Label(..))
-import Language.PureScript.Names (pattern ByNullSourcePos, OpName(..), OpNameType(..), ProperName(..), ProperNameType(..), Qualified(..))
-import Language.PureScript.PSString (PSString)
+import Language.PureScript.Names (pattern ByNullSourcePos, ModuleName(..), OpName(..), OpNameType(..), ProperName(..), ProperNameType(..), Qualified(..))
+import Language.PureScript.PSString (PSString, mkString)
 import Language.PureScript.Types (Constraint, ConstraintData, SkolemScope(..), Type(..), TypeVarVisibility(..), WildcardData, annForType, everythingOnTypes, everythingWithContextOnTypes, everywhereOnTypes, everywhereOnTypesM, everywhereOnTypesTopDownM, getAnnForType)
 
 spec :: Spec
@@ -27,6 +31,41 @@ spec = do
       everythingOnTypesSpec everythingOnTypes
     describe "everythingWithContextOnTypes" $ do
       everythingOnTypesSpec $ \f g -> everythingWithContextOnTypes () [] f $ \s -> (s, ) . g
+
+  describe "inlineCommonOperators function arity" $ do
+    let
+      inner = Just $ SourceSpan "arity.purs" (SourcePos 2 3) (SourcePos 2 17)
+      outer = Just $ SourceSpan "arity.purs" (SourcePos 4 5) (SourcePos 4 29)
+      fn = JS.Var Nothing "fn"
+      argument :: Int -> JS.AST
+      argument i = JS.Var Nothing ("argument" <> show i)
+      call ref args = foldl' (\lhs arg -> JS.App outer lhs [arg]) (JS.App inner ref [fn]) args
+      effectCall ss f args = JS.Function ss Nothing [] (JS.Block ss [JS.Return ss (JS.App ss f args)])
+      families = [("Fn", C.P_runFn, JS.App), ("EffFn", C.P_runEffFn, effectCall),
+                  ("EffectFn", C.P_runEffectFn, effectCall), ("STFn", C.P_runSTFn, effectCall)]
+    for_ families $ \(name, (mn, prefix), result) ->
+      describe name $ do
+        let ref n = JS.ModuleAccessor Nothing mn (prefix <> mkString (show n))
+        for_ [0..10 :: Int] $ \arity -> do
+          let args = map argument [1..arity]
+          it ("preserves arguments, wrappers and inner source span at arity " <> show arity) $
+            inlineCommonOperators identity (call (ref arity) args) `shouldBe` result inner fn args
+          it ("preserves overapplication at arity " <> show arity) $
+            inlineCommonOperators identity (call (ref arity) (args <> [argument 99])) `shouldBe`
+              JS.App outer (result inner fn args) [argument 99]
+          when (arity > 0) $
+            it ("leaves underapplication unchanged at arity " <> show arity) $ do
+              let original = call (ref arity) (take (arity - 1) args)
+              inlineCommonOperators identity original `shouldBe` original
+        it "leaves unsupported arity 11 unchanged" $ do
+          let original = call (ref (11 :: Int)) (map argument [1..11 :: Int])
+          inlineCommonOperators identity original `shouldBe` original
+        it "does not match the same name from another module" $ do
+          let original = call (JS.ModuleAccessor Nothing (ModuleName "Other") (prefix <> "3")) (map argument [1..3 :: Int])
+          inlineCommonOperators identity original `shouldBe` original
+    it "leaves an unrelated long application spine unchanged" $ do
+      let original = call (JS.Var Nothing "unrelated") (map argument [1..32 :: Int])
+      inlineCommonOperators identity original `shouldBe` original
 
 everywhereOnTypesSpec :: ((Type Int -> Type Int) -> Type Int -> Type Int) -> Spec
 everywhereOnTypesSpec everywhereOnTypesUnderTest = do
