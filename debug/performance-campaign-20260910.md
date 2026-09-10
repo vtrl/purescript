@@ -10,7 +10,8 @@ The only accepted compiler optimization is [Make lifetime release
 Later campaign commits preserve evidence, not the rejected binding-visibility,
 CST packing, inliner, or traversal-INLINABLE source changes. Parser-warning
 forcing and specialization flags passed their isolated confirmation blocks and
-are selected for an experimental cumulative build, not accepted source.
+independent audit. Their experimental cumulative build passed correctness;
+paired cumulative performance validation is next, not accepted source.
 Equal-leaf guards remain HOLD after final validation; `varIfUnknown` is rejected
 for integration after its final N1 block. External-fork trials
 are described in [the provenance report](performance-fork-provenance-20260910.md).
@@ -104,12 +105,14 @@ remain idle unless assigned a separately owned next task.
 - New binary-only workers own disjoint leaf N4-five/dense-ten, varIfUnknown
   N1-five, warning-force N4-five, specialization N1-three, and specialization
   N8-three/dense-ten/tiny-ten-per-capability blocks.
-- The independent correctness worker completed the warning-force audit and
-  now audits all isolated specialization raw evidence offline, without timing.
-- A new xxlarge worker owns only the experimental cumulative source union,
-  optimized build, full tests, and preservation of the final tested binary.
-  Its branch is `perf/cumulative-warning-specialization-20260910`; it does not
-  change the accepted branch or run benchmarks yet.
+- The independent correctness worker completed the warning-force and isolated
+  specialization audits. The latter was offline, without new timing.
+- The cumulative builder completed the exact source union, optimized build,
+  full tests, and preservation of the final tested binary. Its branch remains
+  `perf/cumulative-warning-specialization-20260910`, separate from acceptance.
+- Three existing xxlarge binary workers are reused for cumulative full N1-three,
+  full N4-five, and full N8-three plus dense-ten/tiny-ten-per-capability blocks.
+  No additional orb or source variant is needed.
 
 New machines expose 16 logical Xeon CPUs and a 30 GiB workload limit. Fixed
 N1/N4/N8 settings, exact baseline/candidate binary hashes, original corpus,
@@ -124,8 +127,9 @@ preserved, not relabeled as a completed confirmation. A fresh xxlarge block
 replaces it as a separate experiment. Long blocks use managed services with
 an atomic run-once guard, recorded exit status, and an idle hold after completion
 until collection and service stop. This prevents automatic restarts from
-silently adding samples. Cumulative timing waits for the tested exact binary
-and final standalone evidence review; no provisional matrix is running.
+silently adding samples. The exact tested cumulative binary and final standalone
+audit now pass review. Only the prescribed fresh matrix below is assigned;
+there are no provisional or repeated selection screens.
 
 Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
 is the first accepted compiler checkpoint. Other source trials started from
@@ -470,9 +474,22 @@ tiny N1/N4/N8 ten pairs each. Reported dense wall −20.6054%, allocation −43.
 RSS +15.8146%; tiny wall −39.7901%/−43.5006%/−42.0528%, allocation about −49.6%,
 RSS +8.5749%/+9.2463%/+6.1295%. All required product/diagnostic checks passed.
 Their archive hashes are verified by the lead; the separate independent raw
-audit is in progress. The worker recorded a 30→29.5 GiB workload memory-limit
+audit is complete. The worker recorded a 30→29.5 GiB workload memory-limit
 change between snapshots with unknown transition time; preserve that limitation.
 Startup and cold paging are not isolated. See [the boundary report](specialization-boundaries-xxlarge-20260910.md).
+
+The [independent specialization audit](specialization-independent-audit-20260910.md)
+found no material contradiction across eight separate blocks: 120 raw compiles,
+52 measured pairs and 16 excluded warmups. The lead verified all 548 audit
+payload checksums, then replayed `audit.py` using all four original archives.
+Its result JSON equals the independent worker's, including actual binary hashes,
+all full/tiny/dense inputs, retained final product trees, exact warning contents,
+and all raw statistics. No compiler or test was executed in either audit.
+Per-run product comparisons remain harness assertions; nonexistent per-run
+trees are not claimed as directly rehashed. Build/test validation is a supplied-log
+audit, not a rebuild, and the full corpus has no `WarningParsingModule` warnings.
+Review bundle `specialization-independent-audit.tar.gz` has SHA256
+`69431d8a570db757443362d79e5a8f879177885e946bcf7035188cbdf1223611`.
 
 ### The cumulative experiment is exactly warning-force plus both flags
 
@@ -482,13 +499,33 @@ and attributed flags config
 [c7df45fb](https://github.com/vtrl/purescript/commit/c7df45fbb92b824ca7ae3e89b6e8f0d25bcb3c63),
 on Make-equivalent report checkpoint
 [c44600e8](https://github.com/vtrl/purescript/commit/c44600e8f7a390ad73a46f8932e8f90a21b40a8a).
-Its separately owned xxlarge worker prepares only the exact two-patch union,
+Its separately owned xxlarge worker completed the exact two-patch union,
 normal optimized build and full tests, preserving the final tested executable.
 Leaf, varIfUnknown, and all rejected variants are excluded. This is a reversible
 experimental branch, not acceptance into the campaign.
 
+Tested source is
+[d0d4b331](https://github.com/vtrl/purescript/commit/d0d4b3313f37ad9f79997eb6a852dc83aa2f0336).
+The lead independently compared both patch hashes with their original candidates,
+checked the supplied full 1,303/0 and Make 14/0 logs, and rehashed the delivered
+stripped binary: 70,523,064 bytes, SHA256
+`4c80fd2b411d53b82b0aca5dce5a2e4463e9cbf54413b7a90274d152779cba2d`,
+preserved as `.build/perf/purs-cumulative-tested`, mode 0555. The supplied Make
+regression covers asymmetric skipped/independent parser-warning spans. The
+1,268.90 s build includes uncached dependencies and test compilation, not a
+matched baseline build-cost estimate. See [the cumulative correctness report](performance-cumulative-warning-specialization-20260910.md).
+Build evidence `cumulative-warning-specialization-build.tar.gz` has SHA256
+`459d46b9cefa5a07734d3dd1dbf1fe0132e86165424b12f5268f94802e8dc160`.
+
 No standalone percentage is added or assumed to offset another: warning-force
-memory savings may interact with the flags' increased residency. Final paired
-N1/N4/N8 and relevant dense/tiny measurements must use the same tested cumulative
-binary, exact preserved Make baseline, fresh clean-output blocks, and independent
-audit before any integration claim. No cumulative compiler timing has run yet.
+memory savings may interact with the flags' increased residency. The prescribed
+fresh matrix is full N1 three pairs, N4 five pairs, N8 three pairs; dense1000 N1
+ten pairs; and tiny N1/N4/N8 ten pairs each. Each block excludes one clean warmup
+per binary, then uses BC/CB alternating order beginning BC, explicit capabilities,
+warm cache and JS-only code generation through the unchanged harness. All use
+the tested cumulative binary above against preserved Make baseline SHA256
+`7e56d47ac5cdbb7e13e278f97b60abe2311b642bbb3dc545b86139e4da7a1b3a`.
+No outliers may be dropped, old samples pooled, or adaptive repeats added.
+Full/tiny original products and warning contents, local dense products/diagnostics,
+and independent raw-evidence audit are required before any integration claim.
+No cumulative timing result is available at this checkpoint.
