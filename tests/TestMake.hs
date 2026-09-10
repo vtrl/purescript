@@ -25,7 +25,7 @@ import System.Directory (createDirectory, removeDirectoryRecursive, removeFile, 
 import System.IO.Error (isDoesNotExistError)
 import System.IO.UTF8 (readUTF8FilesT, writeUTF8FileT)
 
-import Test.Hspec (Spec, before_, it, shouldReturn)
+import Test.Hspec (Spec, before_, it, shouldMatchList, shouldReturn)
 
 utcMidnightOnDate :: Integer -> Int -> Int -> UTCTime
 utcMidnightOnDate year month day = UTCTime (fromGregorian year month day) (secondsToDiffTime 0)
@@ -160,6 +160,21 @@ spec = do
       compileAllowingFailures [modulePath] `shouldReturn` moduleNames ["Module"]
       compileAllowingFailures [modulePath] `shouldReturn` moduleNames ["Module"]
 
+    it "reports body parse errors even when a dependency failed" $ do
+      let moduleAPath = sourcesDir </> "A.purs"
+          moduleBPath = sourcesDir </> "B.purs"
+          moduleCPath = sourcesDir </> "C.purs"
+          moduleDPath = sourcesDir </> "D.purs"
+      writeFileWithTimestamp moduleAPath timestampA "module A where\nfoo :: Int\nfoo = \"wrong\"\n"
+      writeFileWithTimestamp moduleBPath timestampA "module B where\nimport A (foo)\nbar =\n"
+      writeFileWithTimestamp moduleCPath timestampA "module C where\nimport B (bar)\nbaz = bar\n"
+      writeFileWithTimestamp moduleDPath timestampA "module D where\nindependent = 1\n"
+
+      (result, recompiled) <- compileWithResult [moduleCPath, moduleBPath, moduleDPath, moduleAPath]
+      either (map P.errorCode . P.runMultipleErrors) (const []) result
+        `shouldMatchList` ["TypesDoNotUnify", "ErrorParsingModule"]
+      Set.toList recompiled `shouldMatchList` Set.toList (moduleNames ["A", "D"])
+
     it "recompiles if docs are requested but not up to date" $ do
       let modulePath = sourcesDir </> "Module.purs"
           moduleContent1 = "module Module where\nx :: Int\nx = 1"
@@ -273,4 +288,3 @@ writeFileWithTimestamp path mtime contents = do
 -- from other test results
 modulesDir :: FilePath
 modulesDir = ".test_modules" </> "make"
-

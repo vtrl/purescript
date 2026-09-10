@@ -1,7 +1,7 @@
 # Linux package-set performance campaign
 
 Campaign branch: `perf/linux-package-set-20260910` in `vtrl/purescript`.
-Compiler baseline: `9160ce1518b5f11f9ebe32b445019f8dbb4f435a`, verified
+Original compiler baseline: `9160ce1518b5f11f9ebe32b445019f8dbb4f435a`, verified
 against the fork's `master` and default branch on 2026-09-10. Do not push to
 upstream or merge this campaign to master without separate authorization.
 
@@ -15,7 +15,9 @@ PureScript 0.15.15) and checksum its JSON from registry commit
 `inputs.json` SHA256 is
 `2d7ae344edad25ae4c41af1cbc0e6d1493b4e6e8167f7365481bb738602267ff`.
 
-Run on an otherwise idle Linux benchmark machine:
+Run on an otherwise idle Linux benchmark machine. Build the original baseline
+in a clean checkout of the exact original commit, not the current campaign
+HEAD. Use separate preserved binaries and fresh result paths for candidates:
 
 ```sh
 export PATH="$HOME/.local/share/purescript-orb/bin:$HOME/.local/share/purescript-orb/node/bin:$PATH"
@@ -77,18 +79,24 @@ Linux 6.1.158+, x86-64, KVM. No explicit CPU quota. Record machine metadata
 with each run rather than assuming every large orb is identical.
 
 Concurrency ceiling: eight Ultra orbs including the lead; workers are
-`a1.large` or larger. Four orbs currently:
+`a1.large` or larger. Five orbs currently:
 
 - Lead owns the benchmark harness, non-profiled baseline, integration, and
   combined correctness; `Make.hs` parsing/AST lifetime trial.
-- `perf/profile-baseline-20260910`: baseline GHC CPU/allocation/heap profiles.
+- GHC profiling worker now owns `perf/inliner-arity-20260910`:
+  `CoreImp/Optimizer/Inliner.hs` and direct AST tests in `TestAst.hs`.
 - Baseline correctness/native CPU worker now owns `perf/cst-unpack-20260910`:
-  representation of already-strict products in `CST/Types.hs` only.
-- `perf/nursery-trial-20260910`: default versus larger allocation areas,
-  justified by 45% baseline GC time. Owns RTS/defaults experiments only.
+  representation of already-strict products in `CST/Types.hs`; diagnostic
+  heap profiling of the supplied Make candidate while packing repeats wait.
+- Nursery worker completed the negative RTS trial and now independently
+  measures supplied Make baseline/candidate binaries at N1.
+- `perf/binding-visibility-20260910`: sparse name-visibility promotion in
+  `TypeChecker/Monad.hs` and focused state tests in `TestCompiler.hs`.
 
-Shared source-equivalent harness checkpoint: `b89f5b49`. Candidate compiler
-changes are under development, not yet accepted into the campaign baseline.
+Shared paired harness checkpoint: `e9261835`. The Make lifetime change below
+is the first accepted compiler checkpoint. Other source trials started from
+the original compiler; measure additive gains against the accepted checkpoint
+before integration rather than assuming independent wins compose.
 
 ## Results and trials
 
@@ -178,8 +186,95 @@ This supports two independent source trials:
   dependency failed and never holding the semaphore during dependency waits.
   Separately inspect final result-order bookkeeping retaining parsed modules.
 
-Nursery screening is not yet a win: N1 A16 measured 251.46 s versus the
-worker's same-machine default 248.68 s, despite copied bytes falling from
-68.713 GB to 48.320 GB. A64 warm-up was 18.2% slower. These single-screen
-observations are provisional; the worker is checking N4 before recommending
-discard/retention. No compiler optimization has been accepted yet.
+The separate GHC `-O2 -fprof-auto` allocation profile completed with all
+8,985 products identical. Instrumentation consumed 65.44% of ticks: its
+1,772.55 s duration is not a benchmark. Inclusive JSON-attributed allocation
+identified `runFn'.go` (11.281 GB, 264 million entries),
+`makeBindingGroupVisible` (7.787 GB), and read-only `varIfUnknown`
+(2.531 GB) as bounded hypotheses. These instrumented allocation costs are
+not predictions of uninstrumented savings. Full provenance/accounting is
+in `ghc-profile-report.md` and the compressed raw profile in review artifacts.
+
+### Rejected nursery settings
+
+Retain existing defaults. N1 A16 measured 251.46 s versus the worker's
+same-machine default 248.68 s (+1.12%), despite less copying. N1 A64 took
+305.97 s (+23.04%); N4 A16 took 129.33 s versus 107.42 s (+20.40%). These
+are single-sample screens, not precise effect estimates. Tiny-compilation
+repeats found no stable latency win and substantial RSS increases. No
+candidate merited expensive full repetitions. The evidence-only commit is
+integrated; see [the nursery report](rts-nursery-trial-20260910.md).
+
+### Accepted Make lifetime change
+
+The Make change delays body parsing until dependencies finish and the
+semaphore admits the module, while still reporting syntax errors after a
+dependency fails. It also forces name-only order/dependency data, avoiding
+references from the final ordering list and lazy graph vertices to parsed
+modules. The final candidate passes **1,302 examples, zero failures**.
+
+Five counterbalanced N4 pairs completed on the lead machine, after one
+excluded clean warm-up per binary. Every pair reduced both wall time and
+peak RSS. The modest wall gain and large memory gain justify retention.
+
+| Metric | Baseline mean ± sample SD | Make mean ± sample SD | Mean paired change ± SD |
+| --- | ---: | ---: | ---: |
+| Wall seconds | 111.832 ± 3.495 | 107.228 ± 2.145 | −4.084% ± 1.668% |
+| Peak RSS, KiB | 3,469,681 ± 34,566 | 2,013,866 ± 55,207 | −41.957% ± 1.560% |
+| Maximum residency, bytes | 1,222,174,077 ± 19,006,537 | 692,782,141 ± 20,393,538 | −43.314% ± 1.512% |
+| Allocation, GB | 397.516 ± 0.011 | 397.626 ± 0.009 | +0.028% ± 0.004% |
+
+Individual B/C wall pairs: 110.78/105.02, 109.94/107.53, 110.13/105.90,
+118.06/110.64, 110.25/107.05 s. Warm-ups: 112.14/107.73 s (excluded).
+The improvement is object lifetime, not total allocation reduction. Timing
+drift remains visible; do not compare against the older 109.893 s N4 mean.
+Paired calculations were independently recomputed by sample number.
+
+All 8,985 generated products match across all twelve runs. All runs also
+have the same multiset of 745 warning contents. Warning order already varies
+between original baseline runs; ignore ordinal headers, not warning content.
+The new asymmetric Make test preserves a body syntax error when its dependency
+has a type error, skips their downstream module, and builds an independent one.
+
+Candidate SHA256:
+`7e56d47ac5cdbb7e13e278f97b60abe2311b642bbb3dc545b86139e4da7a1b3a`.
+The supplied source/test patch SHA256 is
+`e2d2e899348f67e781353b3aa4209c492715d890404593d963c9b63455fe76db`.
+The incremental GHC build retained older `6d636561 DIRTY` version metadata;
+binary and source-patch identities, not that version string, identify the
+measured candidate. Raw paired evidence and the full test log are in
+`make-n4-paired.tar.gz` and `make-full-tests.log` under review artifacts.
+
+A separate diagnostic heap profile supports the mechanism: total live-heap
+peak 1,134.21→589.75 MiB, independent CST peak 446.11→80.02 MiB, near-end
+CST 198.59→51.20 MiB. CST retention is reduced, not eliminated. These
+instrumented profiles are not timing comparisons; remaining retaining roots
+are unidentified. See `make-heap-summary.md` and its raw evidence bundle.
+
+N1 repeated validation is still running on a separate machine. Its first two
+complete pairs are 250.22/243.18 and 251.19/239.26 s; the first pair lowers
+RSS 42.85%. This is supporting direction, not a completed five-pair claim.
+Full N8 and tiny boundary checks are also pending; cold and incremental
+candidate timings have not yet been measured.
+
+### Other source trials
+
+CST packing screens measured RSS reductions of 11.83% at N4 and 16.11% at
+N1, but wall differences of −0.20% and +1.85% respectively are not evidence
+of a speedup at one sample each. Its full 1,301-test suite and all products
+pass. The source checkpoint is `perf/cst-unpack-20260910`; additive benefit
+must be measured after the Make lifetime decision, not inferred by adding
+the two standalone memory reductions.
+
+Sparse binding visibility reduced allocation by 7.705 GB (1.94%) in its
+N4 screen, with variable timings; N1 screened 253.39→239.67 s and 1.942%
+less allocation. Its full suite passes 1,306 examples; repetitions are
+underway. It is not yet integrated.
+
+Both inliner changes are rejected. The positive-arity guard alone changed
+N4 wall by −0.08% and allocation by −0.02%. Deferred argument-list creation
+changed wall by +1.30%, RSS by +2.43%, and allocation by only −0.17%.
+These are single-pair screens; neither justifies expensive repetitions.
+Its 1,438-test suite and all products pass, but diagnostic auto-SCC allocation
+attribution did not translate into material normal-O2 savings. Trial source
+and tests remain on the worker branch; only negative evidence is for integration.

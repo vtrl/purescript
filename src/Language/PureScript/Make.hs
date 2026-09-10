@@ -147,7 +147,12 @@ make ma@MakeActions{..} ms = do
   checkModuleNames
   cacheDb <- readCacheDb
 
-  (sorted, graph) <- sortModules Transitive (moduleSignature . CST.resPartial) ms
+  (sorted, moduleGraph) <- sortModules Transitive (moduleSignature . CST.resPartial) ms
+  -- Lazy dependency lists close over graph vertices containing parsed modules.
+  -- Force the name-only graph so completed module bodies can be collected.
+  graph <- evaluate (force moduleGraph)
+  -- Keep only names for ordering after builds finish, not the parsed modules.
+  sortedModuleNames <- evaluate . force $ map (getModuleName . CST.resPartial) sorted
 
   (buildPlan, newCacheDb) <- BuildPlan.construct ma cacheDb (sorted, graph)
 
@@ -169,7 +174,7 @@ make ma@MakeActions{..} ms = do
       (spanName . getModuleSourceSpan . CST.resPartial $ m)
       (fst $ CST.resFull m)
       (fmap importPrim . snd $ CST.resFull m)
-      (deps `inOrderOf` map (getModuleName . CST.resPartial) sorted)
+      (deps `inOrderOf` sortedModuleNames)
 
       -- Prevent hanging on other modules when there is an internal error
       -- (the exception is thrown, but other threads waiting on MVars are released)
@@ -206,7 +211,7 @@ make ma@MakeActions{..} ms = do
   let lookupResult mn =
         fromMaybe (internalError "make: module not found in results")
         $ M.lookup mn successes
-  return (map (lookupResult . getModuleName . CST.resPartial) sorted)
+  return (map lookupResult sortedModuleNames)
 
   where
   checkModuleNames :: m ()
@@ -242,43 +247,43 @@ make ma@MakeActions{..} ms = do
   buildModule :: QSem -> BuildPlan -> ModuleName -> Int -> FilePath -> [CST.ParserWarning] -> Either (NEL.NonEmpty CST.ParserError) Module -> [ModuleName] -> m ()
   buildModule lock buildPlan moduleName cnt fp pwarnings mres deps = do
     result <- flip catchError (return . BuildJobFailed) $ do
-      let pwarnings' = CST.toMultipleWarnings fp pwarnings
-      tell pwarnings'
-      m <- CST.unwrapParserError fp mres
       -- We need to wait for dependencies to be built, before checking if the current
       -- module should be rebuilt, so the first thing to do is to wait on the
       -- MVars for the module's dependencies.
       mexterns <- fmap unzip . sequence <$> traverse (getResult buildPlan) deps
 
-      case mexterns of
-        Just (_, externs) -> do
-          -- We need to ensure that all dependencies have been included in Env
-          C.modifyMVar_ (bpEnv buildPlan) $ \env -> do
-            let
-              go :: Env -> ModuleName -> m Env
-              go e dep = case lookup dep (zip deps externs) of
-                Just exts
-                  | not (M.member dep e) -> externsEnv e exts
-                _ -> return e
-            foldM go env deps
-          env <- C.readMVar (bpEnv buildPlan)
-          idx <- C.takeMVar (bpIndex buildPlan)
-          C.putMVar (bpIndex buildPlan) (idx + 1)
+      -- Parsing the body also belongs behind the semaphore: forcing mres (or
+      -- pwarnings) before dependencies are ready retains full CSTs for modules
+      -- which cannot yet compile. Never hold the semaphore while waiting for
+      -- dependencies, and still report parse errors when a dependency failed.
+      bracket_ (C.waitQSem lock) (C.signalQSem lock) $ do
+        let pwarnings' = CST.toMultipleWarnings fp pwarnings
+        tell pwarnings'
+        m <- CST.unwrapParserError fp mres
+        case mexterns of
+          Just (_, externs) -> do
+            -- We need to ensure that all dependencies have been included in Env
+            C.modifyMVar_ (bpEnv buildPlan) $ \env -> do
+              let
+                go :: Env -> ModuleName -> m Env
+                go e dep = case lookup dep (zip deps externs) of
+                  Just exts
+                    | not (M.member dep e) -> externsEnv e exts
+                  _ -> return e
+              foldM go env deps
+            env <- C.readMVar (bpEnv buildPlan)
+            idx <- C.takeMVar (bpIndex buildPlan)
+            C.putMVar (bpIndex buildPlan) (idx + 1)
 
-          -- Bracket all of the per-module work behind the semaphore, including
-          -- forcing the result. This is done to limit concurrency and keep
-          -- memory usage down; see comments above.
-          (exts, warnings) <- bracket_ (C.waitQSem lock) (C.signalQSem lock) $ do
             -- Eventlog markers for profiling; see debug/eventlog.js
             liftBase $ traceMarkerIO $ T.unpack (runModuleName moduleName) <> " start"
             -- Force the externs and warnings to avoid retaining excess module
             -- data after the module is finished compiling.
-            extsAndWarnings <- evaluate . force <=< listen $ do
+            (exts, warnings) <- evaluate . force <=< listen $ do
               rebuildModuleWithIndex ma env externs m (Just (idx, cnt))
             liftBase $ traceMarkerIO $ T.unpack (runModuleName moduleName) <> " end"
-            return extsAndWarnings
-          return $ BuildJobSucceeded (pwarnings' <> warnings) exts
-        Nothing -> return BuildJobSkipped
+            return $ BuildJobSucceeded (pwarnings' <> warnings) exts
+          Nothing -> return BuildJobSkipped
 
     BuildPlan.markComplete buildPlan moduleName result
 
