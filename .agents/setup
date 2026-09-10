@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd -- "$repo_root"
+
+# Match .github/workflows/ci.yml. Stack selects GHC from stack.yaml.lock.
+stack_version=3.3.1
+node_version=22.23.2
+tools="$HOME/.local/share/purescript-orb"
+export PATH="$tools/bin:$tools/node/bin:$PATH"
+export npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false
+TIMEFORMAT='Finished in %3R seconds'
+
+run() {
+  printf '\n==> %s\n' "$1"
+  shift
+  time "$@"
+}
+
+missing=()
+for package in build-essential ca-certificates curl git libffi-dev libgmp-dev libncurses-dev libtinfo6 netbase pkg-config xz-utils zlib1g-dev; do
+  if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)" != 'install ok installed' ]]; then
+    missing+=("$package")
+  fi
+done
+if ((${#missing[@]})); then
+  run 'Update system package index' sudo apt-get update
+  run 'Install missing build prerequisites' sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}"
+fi
+
+scratch="$(mktemp -d)"
+trap 'rm -rf -- "$scratch"' EXIT
+mkdir -p "$tools/bin"
+
+if [[ "$(stack --numeric-version 2>/dev/null || true)" != "$stack_version" ]]; then
+  archive="stack-$stack_version-linux-x86_64.tar.gz"
+  run "Download Stack $stack_version" curl -fLsS --retry 3 \
+    "https://github.com/commercialhaskell/stack/releases/download/v$stack_version/$archive" -o "$scratch/$archive"
+  echo "88d7e517342c125b0a098d9d578fe53e590618ae4b2427283a27408a1ebd06d8  $scratch/$archive" | sha256sum --check
+  tar -xzf "$scratch/$archive" -C "$scratch"
+  install -m 755 "$scratch/stack-$stack_version-linux-x86_64/stack" "$tools/bin/stack"
+fi
+
+if [[ "$(node --version 2>/dev/null || true)" != "v$node_version" ]]; then
+  archive="node-v$node_version-linux-x64.tar.xz"
+  run "Download Node $node_version (CI's Node 22)" curl -fLsS --retry 3 \
+    "https://nodejs.org/dist/v$node_version/$archive" -o "$scratch/$archive"
+  echo "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307  $scratch/$archive" | sha256sum --check
+  mkdir -p "$tools/node"
+  tar -xJf "$scratch/$archive" -C "$tools/node" --strip-components=1
+fi
+
+# Amp and supervised services use separate login shells. Keep the base orb's
+# Node untouched, and activate these tools only in this repository.
+marker='# PureScript orb toolchain'
+if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
+  cat >> "$HOME/.bash_profile" <<EOF
+
+$marker
+if [[ "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ]]; then
+  case ":\$PATH:" in
+    *":$tools/bin:"*) ;;
+    *) export PATH="$tools/bin:$tools/node/bin:\$PATH" ;;
+  esac
+fi
+EOF
+fi
+
+run 'Install the resolver-pinned GHC' stack --no-terminal setup
+# Precompile test dependencies too, but leave the compiler itself for normal
+# development. Stack's cache check is cheap when restoring a stale snapshot.
+# Scale package compilation to the selected orb size, including larger orbs.
+run 'Cache Haskell build and test dependencies' stack --no-terminal --jobs="$(nproc)" \
+  build --fast --test --only-dependencies --lock-file=error-on-write
+
+pushd tests/support >/dev/null
+# This repository deliberately ignores package-lock.json. npm install keeps
+# an existing node_modules tree, unlike npm ci, and matches TestUtils.hs.
+run 'Install JavaScript test dependencies' npm install --prefer-offline
+run 'Install PureScript test fixtures' node node_modules/bower/bin/bower \
+  --allow-root install --config.interactive=false
+# Use the test harness's existing freshness marker, only after both succeed.
+touch .last_updated
+popd >/dev/null
+
+printf '\nReady: stack build --fast; stack test --fast\n'
+printf 'Total setup time: %s seconds\n' "$SECONDS"

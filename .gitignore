@@ -37,3 +37,6 @@ TAGS
 *.ps
 *.svg
 tests/purs/make/
+
+# Orb portal metadata is specific to each remote machine.
+.amp/portals/*
