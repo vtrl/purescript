@@ -13,6 +13,7 @@ import Control.Monad (guard, void)
 import Control.Exception (tryJust)
 import Control.Monad.IO.Class (liftIO)
 import Control.Concurrent.MVar (readMVar, newMVar, modifyMVar_)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime(..), secondsToDiffTime)
 import Data.Text qualified as T
@@ -174,6 +175,31 @@ spec = do
       either (map P.errorCode . P.runMultipleErrors) (const []) result
         `shouldMatchList` ["TypesDoNotUnify", "ErrorParsingModule"]
       Set.toList recompiled `shouldMatchList` Set.toList (moduleNames ["A", "D"])
+
+    it "preserves parser warnings from skipped and independently built modules" $ do
+      let moduleAPath = sourcesDir </> "A.purs"
+          moduleBPath = sourcesDir </> "B.purs"
+          moduleDPath = sourcesDir </> "D.purs"
+          body = "data Foo = Foo Int\nbar :: Foo -> Int\nbar = case _ of\n    Foo i ->\n  i\n"
+      writeFileWithTimestamp moduleAPath timestampA "module A where\nfoo :: Int\nfoo = \"wrong\"\n"
+      writeFileWithTimestamp moduleBPath timestampA ("module B where\nimport A (foo)\n" <> body)
+      writeFileWithTimestamp moduleDPath timestampA ("module D where\n" <> body)
+
+      moduleFiles <- readUTF8FilesT [moduleBPath, moduleDPath, moduleAPath]
+      (result, warnings) <- P.runMake P.defaultOptions $ do
+        ms <- CST.parseModulesFromFiles id moduleFiles
+        let filePathMap = M.fromList $ map (\(fp, pm) -> (P.getModuleName $ CST.resPartial pm, Right fp)) ms
+        foreigns <- P.inferForeignModules filePathMap
+        let actions = (P.buildMakeActions modulesDir filePathMap foreigns True) { P.progress = const (pure ()) }
+        P.make actions (map snd ms)
+
+      either (map P.errorCode . P.runMultipleErrors) (const []) result
+        `shouldMatchList` ["TypesDoNotUnify"]
+      [(P.errorCode w, P.errorSpan w) | w <- P.runMultipleErrors warnings]
+        `shouldMatchList`
+          [ ("WarningParsingModule", Just (P.SourceSpan moduleBPath (P.SourcePos 7 3) (P.SourcePos 7 4) :| []))
+          , ("WarningParsingModule", Just (P.SourceSpan moduleDPath (P.SourcePos 6 3) (P.SourcePos 6 4) :| []))
+          ]
 
     it "recompiles if docs are requested but not up to date" $ do
       let modulePath = sourcesDir </> "Module.purs"
