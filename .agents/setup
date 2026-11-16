@@ -5,10 +5,10 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd -- "$repo_root"
 
 # Match .github/workflows/ci.yml. Stack selects GHC from stack.yaml.lock.
+# The orb's own Node satisfies tests/support/package.json's engines range.
 stack_version=3.3.1
-node_version=22.23.2
-tools="$HOME/.local/share/purescript-orb"
-export PATH="$tools/bin:$tools/node/bin:$PATH"
+# On PATH in every orb shell, and kept by project snapshots.
+bin="$HOME/.local/bin"
 export npm_config_audit=false npm_config_fund=false npm_config_update_notifier=false
 TIMEFORMAT='Finished in %3R seconds'
 
@@ -29,60 +29,59 @@ if ((${#missing[@]})); then
   run 'Install missing build prerequisites' sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}"
 fi
 
-scratch="$(mktemp -d)"
-trap 'rm -rf -- "$scratch"' EXIT
-mkdir -p "$tools/bin"
+# Earlier versions of this script kept Stack and Node here, on a PATH that
+# shared snapshots did not keep.
+rm -rf -- "$HOME/.local/share/purescript-orb"
 
 if [[ "$(stack --numeric-version 2>/dev/null || true)" != "$stack_version" ]]; then
+  scratch="$(mktemp -d)"
+  trap 'rm -rf -- "$scratch"' EXIT
   archive="stack-$stack_version-linux-x86_64.tar.gz"
   run "Download Stack $stack_version" curl -fLsS --retry 3 \
     "https://github.com/commercialhaskell/stack/releases/download/v$stack_version/$archive" -o "$scratch/$archive"
   echo "88d7e517342c125b0a098d9d578fe53e590618ae4b2427283a27408a1ebd06d8  $scratch/$archive" | sha256sum --check
   tar -xzf "$scratch/$archive" -C "$scratch"
-  install -m 755 "$scratch/stack-$stack_version-linux-x86_64/stack" "$tools/bin/stack"
+  mkdir -p "$bin"
+  install -m 755 "$scratch/stack-$stack_version-linux-x86_64/stack" "$bin/stack"
 fi
 
-if [[ "$(node --version 2>/dev/null || true)" != "v$node_version" ]]; then
-  archive="node-v$node_version-linux-x64.tar.xz"
-  run "Download Node $node_version (CI's Node 22)" curl -fLsS --retry 3 \
-    "https://nodejs.org/dist/v$node_version/$archive" -o "$scratch/$archive"
-  echo "d60acfe00a2932254bb0ad20e01b0d74397a0875595de719654b214f4b03f307  $scratch/$archive" | sha256sum --check
-  mkdir -p "$tools/node"
-  tar -xJf "$scratch/$archive" -C "$tools/node" --strip-components=1
+# These are independent, so run them at the same time. Casa lacks some of
+# the pinned packages, which makes Stack fall back to the Hackage index
+# (1 GB to download and index); fetch it alongside GHC rather than after.
+# Concurrent first runs race to create the Stack root, so create it first
+# (install-ghc is already Stack's default).
+stack --no-terminal config set install-ghc true --global
+pids=()
+run 'Install the resolver-pinned GHC' stack --no-terminal setup &
+pids+=($!)
+if [[ ! -f "${STACK_ROOT:-$HOME/.stack}/pantry/hackage/00-index.tar" ]]; then
+  run 'Download the Hackage index' stack --no-terminal update &
+  pids+=($!)
 fi
-
-# Amp and supervised services use separate login shells. Keep the base orb's
-# Node untouched, and activate these tools only in this repository.
-marker='# PureScript orb toolchain'
-if ! grep -Fqx "$marker" "$HOME/.bash_profile" 2>/dev/null; then
-  cat >> "$HOME/.bash_profile" <<EOF
-
-$marker
-if [[ "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ]]; then
-  case ":\$PATH:" in
-    *":$tools/bin:"*) ;;
-    *) export PATH="$tools/bin:$tools/node/bin:\$PATH" ;;
-  esac
-fi
-EOF
-fi
-
-run 'Install the resolver-pinned GHC' stack --no-terminal setup
-# Precompile test dependencies too, but leave the compiler itself for normal
-# development. Stack's cache check is cheap when restoring a stale snapshot.
-# Scale package compilation to the selected orb size, including larger orbs.
-run 'Cache Haskell build and test dependencies' stack --no-terminal --jobs="$(nproc)" \
-  build --fast --test --only-dependencies --lock-file=error-on-write
-
-pushd tests/support >/dev/null
 # This repository deliberately ignores package-lock.json. npm install keeps
 # an existing node_modules tree, unlike npm ci, and matches TestUtils.hs.
-run 'Install JavaScript test dependencies' npm install --prefer-offline
-run 'Install PureScript test fixtures' node node_modules/bower/bin/bower \
-  --allow-root install --config.interactive=false
-# Use the test harness's existing freshness marker, only after both succeed.
-touch .last_updated
-popd >/dev/null
+run 'Install JavaScript test dependencies' npm install --prefix tests/support --prefer-offline &
+pids+=($!)
+for pid in "${pids[@]}"; do wait "$pid"; done
+
+# Scale package compilation to the selected orb size.
+run 'Build Haskell dependencies' stack --no-terminal --jobs="$(nproc)" \
+  build --fast --test --only-dependencies --lock-file=error-on-write
+
+# Prebuild purs and the test suite the way CONTRIBUTING.md recommends, so the
+# first `stack build --fast` or `stack test --fast` in a thread is incremental.
+# A broken base branch should not stop the dependency cache from being saved.
+if run 'Build purs and its tests (--fast)' stack --no-terminal --jobs="$(nproc)" \
+  build --fast --test --no-run-tests --lock-file=error-on-write; then
+  # Do what TestUtils.updateSupportCode does, so the test suite skips it for a
+  # day. spago needs purs on PATH, which stack exec provides.
+  rm -rf tests/support/.spago
+  run 'Fetch PureScript test packages' stack --no-terminal exec --cwd tests/support -- \
+    node node_modules/spago/bin/bundle.js fetch
+  touch tests/support/.last_updated
+else
+  printf '\nWarning: purs did not build; dependencies are cached, but the first build will be slow.\n'
+fi
 
 printf '\nReady: stack build --fast; stack test --fast\n'
 printf 'Total setup time: %s seconds\n' "$SECONDS"
